@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { base58Encode, base58Decode } from './dist/trade.mjs';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+import { base58Encode, base58Decode, toBase64, fromBase64 } from './dist/trade.mjs';
 import { CONFIG } from './dist/model.mjs';
+import { SETTLEMENT_NETWORK, SETTLEMENT_DOMAIN, SETTLEMENT_AUDIENCE, settlementSigningMessage } from './dist/settlement.mjs';
 import { BRIDGE_DRAFT_CONFIG, validateRecipient, createSolanaConnection } from './dist/bridge.mjs';
 
 // Synthetic public addresses only. No keypairs, RPC calls, or browser wallet.
@@ -384,6 +387,186 @@ function standardEnvironment(before = []) {
   };
   return environment;
 }
+
+// Pinned official SDK, no CDN, keys, wallet prompt, RPC or broadcasts. Fake
+// signatures below are checked by a test verifier; no private key is generated.
+const solanaSDK = vm.runInNewContext(readFileSync(new URL('./dist/assets/vendor/solana-web3-1.98.4.iife.min.js', import.meta.url), 'utf8') + '\nsolanaWeb3;', {
+  TextEncoder, TextDecoder, console, setTimeout, clearTimeout,
+  crypto: { getRandomValues() { throw new Error('Test must not generate keys.'); } },
+  fetch() { throw new Error('Test must not access the network.'); },
+});
+const SIGNATURE_BYTES = new Uint8Array(64).fill(11);
+const SIGNATURE = base58Encode(SIGNATURE_BYTES);
+const SIGN_NOW = 1800000000000;
+function ownershipBytes(change = {}) {
+  return new TextEncoder().encode(settlementSigningMessage({ schema_version: 2, domain: SETTLEMENT_DOMAIN, audience: SETTLEMENT_AUDIENCE,
+    action: 'buy', route: 'solana_usdc_to_native_xrs', nonce: 'a'.repeat(64), created_at: SIGN_NOW / 1000,
+    expires_at: SIGN_NOW / 1000 + 120, network: SETTLEMENT_NETWORK, amount_raw: '1000000', min_output_raw: '995000',
+    source_owner: A, destination_owner: B, solana_token_account: C, quote_id: 'quote-test', client_request_id: 'request-test', ...change }, { now: SIGN_NOW / 1000 }));
+}
+function unsignedSource(address = A) {
+  const transaction = new solanaSDK.Transaction({ feePayer: new solanaSDK.PublicKey(address), recentBlockhash: base58Encode(new Uint8Array(32).fill(3)) });
+  const data = new solanaSDK.PublicKey(C).toBuffer().subarray(0, 1); data[0] = 1;
+  transaction.add(new solanaSDK.TransactionInstruction({ keys: [], programId: new solanaSDK.PublicKey(C), data }));
+  const wire = Uint8Array.from(transaction.serialize({ requireAllSignatures: false, verifySignatures: false }));
+  return { wire, message: Uint8Array.from(transaction.serializeMessage()), unsignedBase64: toBase64(wire), messageBase64: toBase64(transaction.serializeMessage()) };
+}
+function verifier() {
+  const result = { calls: [], valid: true, hook: null };
+  result.subtle = {
+    async importKey(format, key, algorithm, extractable, usages) {
+      assert.equal(format, 'raw'); assert.deepEqual([...key], [...base58Decode(A)]);
+      assert.deepEqual(algorithm, { name: 'Ed25519' }); assert.equal(extractable, false); assert.deepEqual(usages, ['verify']);
+      return 'known-public-key';
+    },
+    async verify(algorithm, key, signature, message) {
+      assert.equal(algorithm, 'Ed25519'); assert.equal(key, 'known-public-key'); assert.deepEqual([...signature], [...SIGNATURE_BYTES]);
+      result.calls.push(Uint8Array.from(message)); await result.hook?.(); return result.valid;
+    },
+  };
+  return result;
+}
+function signingProvider(name = 'Phantom') {
+  const handlers = new Map(), calls = { ownership: 0, transactions: 0, forbidden: 0 };
+  const provider = { [`is${name}`]: true, isConnected: false, publicKey: null, calls,
+    on(event, fn) { if (!handlers.has(event)) handlers.set(event, new Set()); handlers.get(event).add(fn); },
+    removeListener(event, fn) { handlers.get(event)?.delete(fn); },
+    emit(event, value) { for (const fn of handlers.get(event) ?? []) fn(value); },
+    change(address) { this.publicKey = publicKey(address); this.emit('accountChanged', this.publicKey); },
+    async connect() { this.isConnected = true; this.publicKey = publicKey(A); return name === 'Solflare' ? undefined : { publicKey: this.publicKey }; },
+    async disconnect() { this.isConnected = false; this.publicKey = null; this.emit('disconnect'); },
+    async signMessage(message, display) {
+      calls.ownership++; assert.equal(display, 'utf8'); assert.ok(message instanceof Uint8Array);
+      return name === 'Solflare' ? SIGNATURE_BYTES.slice() : { signature: SIGNATURE_BYTES.slice(), publicKey: publicKey(A) };
+    },
+    async signTransaction(transaction) {
+      calls.transactions++; assert.ok(transaction instanceof solanaSDK.Transaction);
+      const wire = Uint8Array.from(transaction.serialize({ requireAllSignatures: false, verifySignatures: false }));
+      wire.set(SIGNATURE_BYTES, 1); return solanaSDK.Transaction.from(wire);
+    },
+  };
+  for (const key of ['signAndSendTransaction', 'sendTransaction', 'request', 'secretKey']) Object.defineProperty(provider, key, { get() { calls.forbidden++; throw new Error('Forbidden sending/key API'); } });
+  return provider;
+}
+function signerSetup(provider = signingProvider(), extra = {}) {
+  const crypto = verifier();
+  const environment = provider.isSolflare ? { solflare: provider } : provider.isBackpack ? { backpack: provider } : { phantom: { solana: provider } };
+  return { provider, environment, crypto, connection: createSolanaConnection({ environment, crypto, now: () => SIGN_NOW,
+    legacyTransactionFactory: wire => solanaSDK.Transaction.from(wire), ...extra }) };
+}
+
+test('explicit signing capabilities never prompt and legacy transactions need the real SDK factory', async () => {
+  const provider = signingProvider(), fixture = signerSetup(provider, { legacyTransactionFactory: null });
+  assert.equal(fixture.connection.getState().canSignOwnership, false);
+  await fixture.connection.connect();
+  assert.equal(fixture.connection.getState().canSignOwnership, true);
+  assert.equal(fixture.connection.getState().canSignTransaction, false);
+  assert.equal(provider.calls.ownership + provider.calls.transactions, 0);
+  const transaction = unsignedSource();
+  await assert.rejects(fixture.connection.signSourceTransaction(transaction.unsignedBase64, transaction.messageBase64), /capability/);
+  assert.equal(provider.calls.transactions, 0);
+  assert.equal(fixture.connection.getState().networkVerified, false);
+});
+
+test('Phantom, Solflare and Backpack ownership methods verify exact domain bytes and known public account', async () => {
+  for (const name of ['Phantom', 'Solflare', 'Backpack']) {
+    const fixture = signerSetup(signingProvider(name));
+    await fixture.connection.connect(`legacy:${name.toLowerCase()}`);
+    const message = ownershipBytes(), result = await fixture.connection.signOwnership(message);
+    assert.equal(result.address, A); assert.equal(result.signature, SIGNATURE); assert.equal(result.messageBase64, toBase64(message));
+    assert.equal(result.sourceChain, 'solana-mainnet'); assert.equal(result.providerId, `legacy:${name.toLowerCase()}`);
+    assert.equal(result.connectionRevision, fixture.connection.getState().revision); assert.ok(Object.isFrozen(result));
+    assert.deepEqual([...fixture.crypto.calls[0]], [...message]); assert.equal(fixture.provider.calls.forbidden, 0);
+  }
+});
+
+test('ownership signing rejects wrong intent/domain/source/expiry and missing crypto before prompting', async () => {
+  const fixture = signerSetup(); await fixture.connection.connect();
+  for (const message of [new TextEncoder().encode('arbitrary message'), ownershipBytes({ source_owner: B }),
+    new Uint8Array(8193), new TextEncoder().encode(new TextDecoder().decode(ownershipBytes()) + '\n')]) {
+    await assert.rejects(fixture.connection.signOwnership(message));
+  }
+  assert.equal(fixture.provider.calls.ownership, 0);
+  const unsupported = signerSetup(signingProvider(), { crypto: {} }); await unsupported.connection.connect();
+  await assert.rejects(unsupported.connection.signOwnership(ownershipBytes()), /Ed25519/);
+  assert.equal(unsupported.provider.calls.ownership, 0);
+});
+
+test('legacy source transactions use real SDK objects then independently verify exact message and signature', async () => {
+  for (const name of ['Phantom', 'Solflare', 'Backpack']) {
+    const fixture = signerSetup(signingProvider(name)); await fixture.connection.connect(`legacy:${name.toLowerCase()}`);
+    const transaction = unsignedSource(), result = await fixture.connection.signSourceTransaction(transaction.unsignedBase64, transaction.messageBase64);
+    assert.equal(result.signature, SIGNATURE); assert.equal(result.address, A); assert.equal(result.sourceChain, 'solana-mainnet');
+    assert.deepEqual([...fromBase64(result.signedTransaction).slice(65)], [...transaction.message]);
+    assert.deepEqual([...fixture.crypto.calls[0]], [...transaction.message]); assert.equal(fixture.provider.calls.transactions, 1);
+    assert.equal(fixture.provider.calls.forbidden, 0);
+  }
+});
+
+test('transaction source, zero signatures, exact reviewed bytes, legacy format and packet bounds are enforced before prompting', async () => {
+  const fixture = signerSetup(); await fixture.connection.connect();
+  const transaction = unsignedSource(), wrong = unsignedSource(B), presigned = transaction.wire.slice(); presigned[1] = 1;
+  const versioned = transaction.wire.slice(); versioned[65] = 0x80;
+  for (const [wire, message] of [[wrong.unsignedBase64, wrong.messageBase64], [toBase64(presigned), transaction.messageBase64],
+    [transaction.unsignedBase64, toBase64(Uint8Array.of(1))], [toBase64(versioned), toBase64(versioned.slice(65))],
+    [toBase64(new Uint8Array(1233)), transaction.messageBase64]]) await assert.rejects(fixture.connection.signSourceTransaction(wire, message));
+  assert.equal(fixture.provider.calls.transactions, 0);
+});
+
+test('changed message, invalid signature or inconsistent legacy returned owner never returns a usable proof', async () => {
+  const invalid = signerSetup(); await invalid.connection.connect(); invalid.crypto.valid = false;
+  await assert.rejects(invalid.connection.signOwnership(ownershipBytes()), /invalid/);
+  const mismatch = signerSetup(); await mismatch.connection.connect();
+  mismatch.provider.signMessage = async () => ({ signature: SIGNATURE_BYTES.slice(), publicKey: publicKey(B) });
+  await assert.rejects(mismatch.connection.signOwnership(ownershipBytes()), /invalid/);
+  const changed = signerSetup(); await changed.connection.connect();
+  changed.provider.signTransaction = async transaction => {
+    const wire = Uint8Array.from(transaction.serialize({ requireAllSignatures: false, verifySignatures: false }));
+    wire.set(SIGNATURE_BYTES, 1); wire[wire.length - 1] ^= 1; return solanaSDK.Transaction.from(wire);
+  };
+  const transaction = unsignedSource();
+  await assert.rejects(changed.connection.signSourceTransaction(transaction.unsignedBase64, transaction.messageBase64), /invalid/);
+  assert.equal(changed.crypto.calls.length, 0);
+});
+
+test('account/provider changes, disconnect, dispose and overlapping prompts invalidate late signing results', async () => {
+  for (const mutate of [fixture => fixture.provider.change(B), fixture => fixture.connection.disconnect(),
+    fixture => fixture.connection.dispose(), fixture => { fixture.environment.phantom.solana = signingProvider(); }]) {
+    const fixture = signerSetup(), wait = deferred(); await fixture.connection.connect();
+    fixture.provider.signMessage = async () => { await wait.promise; return { signature: SIGNATURE_BYTES.slice(), publicKey: publicKey(A) }; };
+    const pending = fixture.connection.signOwnership(ownershipBytes()); await tick();
+    await assert.rejects(fixture.connection.signOwnership(ownershipBytes()), /in progress/);
+    await mutate(fixture); wait.resolve(); await assert.rejects(pending, /changed or invalid/);
+  }
+  const fixture = signerSetup(); await fixture.connection.connect(); fixture.crypto.hook = () => fixture.provider.change(B);
+  await assert.rejects(fixture.connection.signOwnership(ownershipBytes()), /changed or invalid/);
+});
+
+test('Wallet Standard signing uses the account feature API and explicit Solana mainnet without fallback', async () => {
+  const wallet = standardWallet(), crypto = verifier();
+  Object.defineProperty(wallet.features, 'solana:signMessage', { configurable: true, value: { version: '1.1.0', async signMessage(input) {
+    assert.equal(arguments.length, 1); assert.equal(input.account, wallet.accounts[0]);
+    return [{ signedMessage: input.message.slice(), signature: SIGNATURE_BYTES.slice(), signatureType: 'ed25519' }];
+  } } });
+  Object.defineProperty(wallet.features, 'solana:signTransaction', { configurable: true, value: { version: '1.0.0', supportedTransactionVersions: ['legacy'], async signTransaction(input) {
+    assert.equal(arguments.length, 1); assert.equal(input.account, wallet.accounts[0]); assert.equal(input.chain, 'solana:mainnet');
+    const wire = input.transaction.slice(); wire.set(SIGNATURE_BYTES, 1); return [{ signedTransaction: wire }];
+  } } });
+  wallet.features['standard:connect'].connect = async () => {
+    wallet.accounts = [{ ...standardAccount(), features: ['solana:signMessage', 'solana:signTransaction'] }]; return { accounts: wallet.accounts };
+  };
+  const connection = createSolanaConnection({ environment: standardEnvironment([wallet]), crypto, now: () => SIGN_NOW });
+  await connection.connect(connection.getWallets().find(value => value.kind === 'wallet-standard').id);
+  assert.equal(connection.getState().canSignOwnership, true); assert.equal(connection.getState().canSignTransaction, true);
+  assert.equal((await connection.signOwnership(ownershipBytes())).signature, SIGNATURE);
+  const transaction = unsignedSource();
+  assert.equal((await connection.signSourceTransaction(transaction.unsignedBase64, transaction.messageBase64)).signature, SIGNATURE);
+  wallet.features['solana:signMessage'].signMessage = async input => [{ signedMessage: Uint8Array.of(...input.message, 0), signature: SIGNATURE_BYTES.slice() }];
+  await assert.rejects(connection.signOwnership(ownershipBytes()), /changed or invalid/);
+  wallet.features['solana:signTransaction'].supportedTransactionVersions = [0];
+  assert.equal(connection.getState().canSignTransaction, false);
+  await assert.rejects(connection.signSourceTransaction(transaction.unsignedBase64, transaction.messageBase64), /capability/);
+});
 
 test('picker lists known providers even unavailable and exposes no provider object or metadata URLs', () => {
   const connection = createSolanaConnection({ environment: {} });

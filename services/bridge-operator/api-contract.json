@@ -1,0 +1,151 @@
+{
+  "contract_version": 1,
+  "base": "https://mainnetrpc.xerisweb.com/settlement/v1",
+  "implementation_default": "paused",
+  "funds_acceptance_authorized_by_this_file": false,
+  "intent_schema_version": 2,
+  "intent_domain": "xeris-mainnet-settlement-intent-v2",
+  "routes": {
+    "buy": {
+      "route": "solana_usdc_to_native_xrs",
+      "input_decimals": 6,
+      "output_decimals": 9,
+      "stages": [
+        "deposit",
+        "mint",
+        "buy",
+        "unwrap",
+        "deliver"
+      ]
+    },
+    "redeem": {
+      "route": "xusdc_to_solana_usdc",
+      "input_decimals": 6,
+      "output_decimals": 6,
+      "stages": [
+        "burn",
+        "payout"
+      ],
+      "minimum_rule": "min_output_raw equals amount_raw; no USDC deduction in this policy"
+    },
+    "sell": {
+      "route": "native_xrs_to_solana_usdc",
+      "enabled": false,
+      "alternative": "Existing separately approved Xeris wrap and sell, then redeem the exact chosen xUSDC amount"
+    }
+  },
+  "existing_envelopes": "capabilities/quotes/challenges/requests/access/status retain service.py schema_version 1 envelopes and intent-v2 binding keys",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/capabilities",
+      "auth": "none"
+    },
+    {
+      "method": "POST",
+      "path": "/quotes",
+      "body": [
+        "client_request_id",
+        "action",
+        "route",
+        "amount_raw",
+        "source_owner",
+        "destination_owner",
+        "solana_token_account",
+        "slippage_bps"
+      ],
+      "slippage_bps": 50
+    },
+    {
+      "method": "POST",
+      "path": "/challenges",
+      "body": [
+        "quote_id",
+        "client_request_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/requests",
+      "body": [
+        "intent",
+        "signature"
+      ],
+      "headers": {
+        "Idempotency-Key": "client_request_id"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/requests/{client_request_id}/access",
+      "body": [
+        "intent",
+        "signature"
+      ],
+      "purpose": "Original ownership proof restores status access even after expiry; no new funds accepted"
+    },
+    {
+      "method": "GET",
+      "path": "/requests/{client_request_id}",
+      "auth": "Bearer status_token"
+    },
+    {
+      "method": "POST",
+      "path": "/requests/{client_request_id}/prepare-source",
+      "auth": "Bearer status_token",
+      "body": {},
+      "response": {
+        "schema_version": 1,
+        "source": {
+          "client_request_id": "bound identifier",
+          "intent_digest": "SHA256(exact UTF-8 intent signing message)",
+          "chain": "solana:mainnet or xeris-mainnet-v4",
+          "stage": "deposit or burn",
+          "signer": "source_owner",
+          "transaction_base64": "canonical unsigned one-signature transaction",
+          "message_base64": "exact bytes to approve",
+          "message_sha256": "lowercase SHA256",
+          "expires_at": "Unix integer seconds, bounded by intent and blockhash",
+          "fee_raw": "exact decimal string",
+          "fee_asset": "SOL or XRS"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/requests/{client_request_id}/submit-source",
+      "auth": "Bearer status_token",
+      "body": [
+        "transaction_base64"
+      ],
+      "response": {
+        "schema_version": 1,
+        "request": "same authenticated status object"
+      },
+      "rule": "Exact prepared message and source Ed25519 signature are independently verified. Original signed bytes and ID are durable before any broadcast. Identical retries return status; no automatic resend/replacement."
+    }
+  ],
+  "source_rules": {
+    "buy": "Existing source USDC ATA only, derived from source_owner. Six ordered accounts [owner,sourceATA,reserveATA,USDCmint,classicTokenProgram,MemoProgram]; header [1,0,3]; exact TransferChecked(index0,amount_raw,decimals6), then Memo(index1,accounts[0]) ASCII xeris:settlement:v2:<intent_digest>. User pays observed Solana fee; no source ATA creation or unrelated instruction.",
+    "redeem": "Exactly one Xeris TokenBurn(xeris_usdc,source_owner,amount_raw), one source-owner signature; 0.001 native XRS gas. Burn does not encode recipient: prior signed intent plus exact prepared message/global claim binding is mandatory. Destination is the fixed USDC ATA derived from destination_owner; payout may create it idempotently at operator expense.",
+    "recipient": "buy destination_owner is Xeris recipient; redeem destination_owner is Solana recipient. Public address format is not ownership proof. Source proof signs all immutable economic/network/recipient fields."
+  },
+  "statuses": [
+    "awaiting_funding",
+    "processing",
+    "completed",
+    "failed",
+    "cancelled",
+    "manual_review",
+    "refunded"
+  ],
+  "recovery": "Persist intent/proof/client_request_id and original signed source transaction locally BEFORE HTTP submit. After timeout restore/query same request; never create a replacement request, signature or burn. Completion requires verified delivery/payout, not submission acknowledgment. Pausing never hides known obligations or disables their observation.",
+  "amounts": "All raw monetary amounts are canonical decimal strings, u64 bounded. Timestamps are exact Unix integer seconds. Quotes expire in 60 seconds; a valid on-chain event may finalize later but must meet its bound source acceptance window.",
+  "chain_trust": "Finalized Solana receipts; pinned, agreeing Xeris observers with complete canonical block evidence and explicit confirmation depth. This is operator-mediated settlement, not a trustless bridge or irreversible-finality proof.",
+  "status_output_fields": {
+    "actual_output_raw": "null until confirmed completed; exact deliver/payout raw amount thereafter",
+    "refund_amount_raw": "null until confirmed refunded; exact Solana USDC raw amount thereafter",
+    "refund_asset": "null unless confirmed refunded, then solana_usdc"
+  },
+  "expired_original_recovery": "POST submit-source at or after intent/prepared expiry is guaranteed observation-only and never broadcasts. Exact already committed original always returns status without resend. A newly reported original is matched to retained prepared bytes, verified, persisted as recovery-only and observed. Local clients with a signed source must not replace a server-cancelled request."
+}

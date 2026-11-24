@@ -1,4 +1,5 @@
 import {bootDex, networkHref, renderMode, selectedNetwork} from './mode.mjs';
+import {loadSolanaLibrary} from './solana-loader.mjs';
 
 // Version choice is outside the product surface and always stays usable.
 for (const button of document.querySelectorAll('[data-dex-network]')) {
@@ -22,7 +23,7 @@ function failed() {
 async function loadMainnet() {
   let timer;
   try {
-    await Promise.race([import('./app.mjs'),new Promise((_,reject) => {timer=setTimeout(()=>reject(new Error('Startup timeout')),15000);})]);
+    await Promise.race([(async()=>{await loadSolanaLibrary(document);await import('./app.mjs');})(),new Promise((_,reject) => {timer=setTimeout(()=>reject(new Error('Startup timeout')),15000);})]);
   } finally { clearTimeout(timer); }
 }
 function showMode(state) {

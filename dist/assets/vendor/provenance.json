@@ -1,0 +1,28 @@
+{
+  "package": "@solana/web3.js",
+  "version": "1.98.4",
+  "metadata_url": "https://registry.npmjs.org/@solana%2fweb3.js/1.98.4",
+  "repository": {
+    "url": "git+https://github.com/solana-foundation/solana-web3.js.git",
+    "type": "git"
+  },
+  "tarball_url": "https://registry.npmjs.org/@solana/web3.js/-/web3.js-1.98.4.tgz",
+  "npm_integrity": "sha512-vv9lfnvjUsRiq//+j5pBdXig0IQdtzA0BRZ3bXEP4KaIyF1CcaydWqgyzQgfZMNIsWNWmG+AUHwPy4AHOD6gpw==",
+  "verified_integrity": "sha512-vv9lfnvjUsRiq//+j5pBdXig0IQdtzA0BRZ3bXEP4KaIyF1CcaydWqgyzQgfZMNIsWNWmG+AUHwPy4AHOD6gpw==",
+  "archive_sha256": "410ea26b7625ff7dea7e138de9d3a63eb0aaf3e1c04ba936feab9224b4be8a82",
+  "license": "MIT",
+  "files": {
+    "solana-web3-1.98.4.iife.min.js": {
+      "source_member": "package/lib/index.iife.min.js",
+      "bytes": 463860,
+      "sha256": "09cdbea951b2ed0e11bcbe3aeb1ee9f035f9fb51ed212aca645475ae82688cc3"
+    },
+    "solana-web3-1.98.4.LICENSE": {
+      "source_member": "package/LICENSE",
+      "bytes": 1060,
+      "sha256": "c181f3e6911f515d2b5d18513f8e24fba252c36856978fa80b01249fa813453f"
+    }
+  },
+  "official_browser_bundle_docs": "https://github.com/solana-foundation/solana-web3.js/tree/maintenance/v1.x#for-use-in-a-browser-without-a-build-system",
+  "runtime_cdn_required": false
+}

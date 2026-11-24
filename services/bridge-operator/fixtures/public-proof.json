@@ -1,0 +1,12 @@
+{
+  "purpose": "Public Ed25519 verification fixture; contains no private key.",
+  "proofs": {
+    "deposit": {
+      "intent": {
+        "source_owner": "AyJzh1gmtPUzJmNC5PgBffk5g8wqmL98mhtQryY2R6PL"
+      },
+      "signing_message_utf8": "Xeris request ownership proof\nxeris-mainnet-usdc-operator-intent-v1\n{\"amount_raw\":\"500000\",\"audience\":\"https://mainnetrpc.xerisweb.com/operator\",\"created_at\":1806026400,\"destination_owner\":\"AewdPQ7zeUhGQEDisAWHgwpCZZdCb42bdsoxVrq7zYFN\",\"domain\":\"xeris-mainnet-usdc-operator-intent-v1\",\"expires_at\":1806027000,\"kind\":\"deposit\",\"network\":{\"reserve_token_account\":\"BeM8R5hvdKGwiV5jKdug3kXoe6RaFaREjihKFNSjeBD6\",\"solana_genesis\":\"5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d\",\"usdc_mint\":\"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v\",\"xeris_chain_id\":\"xeris-mainnet-v4\",\"xeris_token_id\":\"xeris_usdc\"},\"nonce\":\"0101010101010101010101010101010101010101010101010101010101010101\",\"schema_version\":1,\"solana_token_account\":\"4iYFsZcZXQLTfykuzRwY19SxRja53Vm6jSf6CuTx6Kjt\",\"source_owner\":\"AyJzh1gmtPUzJmNC5PgBffk5g8wqmL98mhtQryY2R6PL\"}",
+      "signature": "4sVEm8zcFF4jT2ctsqFCLJp2mY92GzEsQYKL4tNdfGCxVxY71uavNEqGGf6keLMSG3XcK2PSsS2ny8cXhUGqWeF4"
+    }
+  }
+}

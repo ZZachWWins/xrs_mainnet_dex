@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "policy_id": "settlement-v2-pending",
+  "enabled": false,
+  "valid_from": 0,
+  "expires_at": 0,
+  "maximum_usdc_raw": "500000",
+  "maximum_total_usdc_raw": "1000000",
+  "maximum_sol_debit_lamports": "20000000",
+  "operator_wallet": "REPLACE_WITH_APPROVED_PUBLIC_ROUTE_WALLET",
+  "keys": {
+    "treasury": {"public_key": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL", "path": "/REPLACE/LOCAL/PRIVATE/TREASURY/PATH"},
+    "operator": {"public_key": "REPLACE_WITH_APPROVED_PUBLIC_ROUTE_WALLET", "path": "/REPLACE/LOCAL/PRIVATE/OPERATOR/PATH"},
+    "solana": {"public_key": "BzyrcS63PR4kxt8WAbtCptsbN1czdSsyTt4AaaWJpKTA", "path": "/REPLACE/LOCAL/PRIVATE/SOLANA/PATH"}
+  }
+}

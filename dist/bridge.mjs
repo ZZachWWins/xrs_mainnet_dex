@@ -1,8 +1,9 @@
 import { CONFIG } from './model.mjs';
-import { base58Decode } from './trade.mjs';
+import { base58Decode, base58Encode, toBase64, fromBase64, verifySignedTransaction } from './trade.mjs';
+import { settlementSigningMessage } from './settlement.mjs';
 
-// This module only connects a public account and prepares a recipient review.
-// It does not authorize an operator request, prove ownership, or accept funds.
+// Existing UI only connects/reviews public accounts. New signing methods are
+// explicit, independently verified, and not called by that UI. Never broadcasts.
 export const BRIDGE_DRAFT_CONFIG = Object.freeze({
   sourceChain: 'solana-mainnet',
   destinationChain: CONFIG.chainId,
@@ -48,6 +49,57 @@ const LEGACY_WALLETS = Object.freeze([
   { id: 'legacy:backpack', name: 'Backpack', flag: 'isBackpack', read: environment => environment?.backpack },
 ]);
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+const OWNERSHIP_PREFIX = 'Xeris settlement ownership proof\nxeris-mainnet-settlement-intent-v2\n';
+const bytesEqual = (left, right) => left.length === right.length && left.every((byte, index) => byte === right[index]);
+function bytes(value, maximum) {
+  if (!ArrayBuffer.isView(value) || Object.prototype.toString.call(value) !== '[object Uint8Array]'
+    || value.byteLength < 1 || value.byteLength > maximum) throw new Error('Invalid wallet signing bytes.');
+  return Uint8Array.from(value);
+}
+// Feature discovery never invokes a signing accessor or method.
+function dataProperty(object, key) {
+  try {
+    for (let depth = 0; object && depth < 8; depth++, object = Object.getPrototypeOf(object)) {
+      const descriptor = Object.getOwnPropertyDescriptor(object, key);
+      if (descriptor) return own(descriptor, 'value') ? descriptor.value : undefined;
+    }
+  } catch { /* An inaccessible feature is unavailable. */ }
+  return undefined;
+}
+function compact(bytes, cursor) {
+  let value = 0, shift = 0, count = 0;
+  while (count < 3 && cursor.offset < bytes.length) {
+    const byte = bytes[cursor.offset++]; count++; value |= (byte & 127) << shift;
+    if (!(byte & 128)) {
+      if (value > 65535 || (count > 1 && value < 2 ** (7 * (count - 1)))) break;
+      return value;
+    }
+    shift += 7;
+  }
+  throw new Error('Invalid legacy transaction length.');
+}
+function reviewedLegacyTransaction(unsignedBase64, expectedMessageBase64, address) {
+  const wire = fromBase64(unsignedBase64), message = fromBase64(expectedMessageBase64);
+  if (wire.length > 1232 || wire.length < 102 || wire[0] !== 1 || wire.slice(1, 65).some(value => value !== 0)
+    || !bytesEqual(wire.slice(65), message) || message[0] !== 1 || message[1] !== 0) throw new Error('Review one unsigned legacy transaction with exactly one payer signature.');
+  const cursor = { offset: 3 }, accounts = compact(message, cursor);
+  if (!accounts || accounts > 256 || message[2] >= accounts || cursor.offset + accounts * 32 + 32 >= message.length
+    || !bytesEqual(message.slice(cursor.offset, cursor.offset + 32), base58Decode(address))) throw new Error('The reviewed transaction has a different source account.');
+  cursor.offset += accounts * 32 + 32;
+  const instructions = compact(message, cursor);
+  if (!instructions || instructions > 64) throw new Error('Invalid legacy transaction instructions.');
+  for (let index = 0; index < instructions; index++) {
+    if (cursor.offset >= message.length || message[cursor.offset++] >= accounts) throw new Error('Invalid legacy transaction program index.');
+    const count = compact(message, cursor);
+    if (count > 256 || cursor.offset + count > message.length) throw new Error('Invalid legacy transaction account indices.');
+    for (let account = 0; account < count; account++) if (message[cursor.offset++] >= accounts) throw new Error('Invalid legacy transaction account index.');
+    const data = compact(message, cursor);
+    if (cursor.offset + data > message.length) throw new Error('Invalid legacy transaction instruction data.');
+    cursor.offset += data;
+  }
+  if (cursor.offset !== message.length) throw new Error('Unexpected trailing legacy transaction bytes.');
+  return { wire, message };
+}
 
 function walletName(value) {
   if (typeof value !== 'string' || value.length > 80) return null;
@@ -93,8 +145,9 @@ function sameAdapter(left, right) {
 }
 
 /**
- * Explicit public-account connection only. No signing, submission, eager connect,
- * generic window.solana, wallet-supplied HTML/icon/URL, or stored account consent.
+ * Discovery/connection never signs, submits, or connects eagerly. The two explicit
+ * signing methods below are unused by the existing UI and never broadcast.
+ * No generic window.solana, wallet-supplied HTML/icon/URL, or stored consent.
  * Wallet Standard discovery is the register/app-ready protocol, with a real
  * register API in event.detail; registration itself never authorizes an account.
  * Sources: github.com/wallet-standard/wallet-standard (core app/base/features),
@@ -102,8 +155,10 @@ function sameAdapter(left, right) {
  * github.com/solflare-wallet/solflare-sdk/blob/master/src/index.ts,
  * github.com/coral-xyz/backpack (provider-injection and provider-core).
  */
-export function createSolanaConnection({ environment = globalThis, onChange = () => {}, onWalletsChange = () => {} } = {}) {
+export function createSolanaConnection({ environment = globalThis, onChange = () => {}, onWalletsChange = () => {},
+  legacyTransactionFactory = null, crypto = globalThis.crypto, now = Date.now } = {}) {
   if (typeof onChange !== 'function' || typeof onWalletsChange !== 'function') throw new TypeError('Wallet callbacks must be functions.');
+  if ((legacyTransactionFactory !== null && typeof legacyTransactionFactory !== 'function') || typeof now !== 'function') throw new TypeError('Invalid explicit signing dependencies.');
   const registered = new Map();
   let nextWalletId = 1;
   let selectedId = 'legacy:phantom'; // Preserve no-argument connect() compatibility.
@@ -114,6 +169,7 @@ export function createSolanaConnection({ environment = globalThis, onChange = ()
   let removeActiveListeners = null;
   let pendingConnect = null;
   let pendingDisconnect = null;
+  let pendingSign = false;
   let walletList = Object.freeze([]), walletListKey = '', walletNoticePending = false;
   let discoveryListener = null;
   const reviews = new WeakSet();
@@ -121,7 +177,7 @@ export function createSolanaConnection({ environment = globalThis, onChange = ()
   let state = Object.freeze({
     status: adapter ? 'disconnected' : 'unavailable', address: null, revision: 0,
     provider: selectedName, providerId: selectedId, providerType: selectedKind,
-    networkVerified: false, error: null, canAcceptFunds: false,
+    networkVerified: false, error: null, canAcceptFunds: false, canSignOwnership: false, canSignTransaction: false,
   });
 
   function findAdapter(id) {
@@ -195,11 +251,39 @@ export function createSolanaConnection({ environment = globalThis, onChange = ()
     return walletList;
   }
 
+  function signingParts(kind, owner = adapter) {
+    if (!owner) return null;
+    const method = kind === 'ownership' ? 'signMessage' : 'signTransaction';
+    if (owner.kind === 'injected') {
+      const fn = dataProperty(owner.owner, method);
+      return typeof fn === 'function' && (kind === 'ownership' || legacyTransactionFactory)
+        ? { fn, receiver: owner.owner, account: null } : null;
+    }
+    try {
+      const wallet = owner.owner, address = standardAddress(wallet, wallet.accounts);
+      const account = wallet.accounts.find(account => account.address === address && account.chains.includes(SOLANA_MAINNET));
+      const feature = dataProperty(wallet.features, `solana:${method}`);
+      const fn = dataProperty(feature, method);
+      if (!account?.features.includes(`solana:${method}`) || typeof fn !== 'function') return null;
+      if (kind === 'ownership' ? !['1.0.0', '1.1.0'].includes(feature.version)
+        : feature.version !== '1.0.0' || !Array.isArray(feature.supportedTransactionVersions)
+          || !feature.supportedTransactionVersions.includes('legacy')) return null;
+      return { fn, receiver: feature, account };
+    } catch { return null; }
+  }
+
+  function capabilities(status, address) {
+    return { canSignOwnership: status === 'connected' && !!address && !!signingParts('ownership'),
+      canSignTransaction: status === 'connected' && !!address && !!signingParts('transaction') };
+  }
+
   function publish(status, address = null, error = null, force = false) {
+    const signing = capabilities(status, address);
     if (!force && state.status === status && state.address === address && state.error === error
-      && state.providerId === selectedId && state.provider === selectedName && state.providerType === selectedKind) return state;
+      && state.providerId === selectedId && state.provider === selectedName && state.providerType === selectedKind
+      && state.canSignOwnership === signing.canSignOwnership && state.canSignTransaction === signing.canSignTransaction) return state;
     state = Object.freeze({ ...state, status, address, error, providerId: selectedId,
-      provider: selectedName, providerType: selectedKind, revision: state.revision + 1 });
+      provider: selectedName, providerType: selectedKind, ...signing, revision: state.revision + 1 });
     try { onChange(state); } catch { /* UI owns its error reporting. */ }
     return state;
   }
@@ -237,7 +321,7 @@ export function createSolanaConnection({ environment = globalThis, onChange = ()
         }
       } catch { loseConnection(`${selectedName} returned an invalid or ambiguous mainnet account. Reconnect with one account selected.`); }
     }
-    return state;
+    return publish(state.status, state.address, state.error);
   }
 
   function addListeners(owner) {
@@ -379,6 +463,99 @@ export function createSolanaConnection({ environment = globalThis, onChange = ()
     } catch { return false; }
   }
 
+  function signingContext(kind) {
+    const current = syncProvider(), parts = signingParts(kind);
+    if (disposed || current.status !== 'connected' || !current.address || !sessionEnabled || !parts) throw new Error('Connect a Solana mainnet account with the required signing capability.');
+    return { ...parts, adapter, generation, revision: current.revision, address: current.address, providerId: current.providerId };
+  }
+  function currentSigning(context, kind) {
+    const current = syncProvider(), parts = signingParts(kind);
+    if (disposed || !sessionEnabled || adapter !== context.adapter || generation !== context.generation
+      || current.revision !== context.revision || current.status !== 'connected' || current.address !== context.address
+      || current.providerId !== context.providerId || !parts || parts.fn !== context.fn
+      || (parts.account && parts.account !== context.account)) throw new Error('The selected wallet, account or signing capability changed. Review again.');
+  }
+  function signedMetadata(context) {
+    return { address: context.address, connectionRevision: context.revision, providerId: context.providerId, sourceChain: 'solana-mainnet' };
+  }
+
+  // These explicit methods are not called by the existing account-review UI.
+  // APIs: anza-xyz/wallet-standard packages/core/features/src/{signMessage,signTransaction}.ts;
+  // phantom/docs signing-a-message.md and sending-a-transaction.md;
+  // solflare-wallet/solflare-sdk src/index.ts. No send/request fallback exists.
+  async function signOwnership(messageBytes) {
+    if (pendingSign) throw new Error('A wallet signing request is already in progress.');
+    const context = signingContext('ownership'), expected = bytes(messageBytes, 8192);
+    let text, intent;
+    try {
+      text = new TextDecoder('utf-8', { fatal: true }).decode(expected);
+      if (!text.startsWith(OWNERSHIP_PREFIX)) throw new Error();
+      intent = JSON.parse(text.slice(OWNERSHIP_PREFIX.length));
+      if (intent.action !== 'buy' || intent.source_owner !== context.address
+        || text !== settlementSigningMessage(intent, { now: Math.floor(now() / 1000) })) throw new Error();
+    } catch { throw new Error('Review the exact current Solana mainnet settlement ownership intent before signing.'); }
+    if (!crypto?.subtle) throw new Error('This browser cannot verify Ed25519 signatures.');
+    pendingSign = true;
+    try {
+      currentSigning(context, 'ownership');
+      const response = context.account
+        ? await context.fn.call(context.receiver, { account: context.account, message: expected.slice() })
+        : await context.fn.call(context.receiver, expected.slice(), 'utf8');
+      currentSigning(context, 'ownership');
+      if (text !== settlementSigningMessage(intent, { now: Math.floor(now() / 1000) })) throw new Error();
+      let signature;
+      if (context.account) {
+        if (!Array.isArray(response) || response.length !== 1 || !bytesEqual(bytes(response[0]?.signedMessage, 8192), expected)
+          || (response[0].signatureType !== undefined && response[0].signatureType !== 'ed25519')) throw new Error();
+        signature = bytes(response[0].signature, 64);
+      } else {
+        if (response?.publicKey !== undefined && providerAddress(response.publicKey) !== context.address) throw new Error();
+        signature = bytes(ArrayBuffer.isView(response) ? response : response?.signature, 64);
+      }
+      if (signature.length !== 64 || signature.every(byte => byte === 0)) throw new Error();
+      const publicKey = await crypto.subtle.importKey('raw', base58Decode(context.address), { name: 'Ed25519' }, false, ['verify']);
+      if (!await crypto.subtle.verify('Ed25519', publicKey, signature, expected)) throw new Error();
+      currentSigning(context, 'ownership');
+      if (text !== settlementSigningMessage(intent, { now: Math.floor(now() / 1000) })) throw new Error();
+      return Object.freeze({ ...signedMetadata(context), signature: base58Encode(signature), messageBase64: toBase64(expected) });
+    } catch { throw new Error('Wallet ownership signing was declined, changed or invalid. Nothing was broadcast.'); }
+    finally { pendingSign = false; }
+  }
+
+  async function signSourceTransaction(unsignedBase64, exactExpectedMessageBase64) {
+    if (pendingSign) throw new Error('A wallet signing request is already in progress.');
+    const context = signingContext('transaction');
+    const reviewed = reviewedLegacyTransaction(unsignedBase64, exactExpectedMessageBase64, context.address);
+    if (!crypto?.subtle) throw new Error('This browser cannot verify Ed25519 signatures.');
+    pendingSign = true;
+    try {
+      let transaction;
+      if (!context.account) {
+        transaction = legacyTransactionFactory(reviewed.wire.slice());
+        if (!transaction || typeof transaction.serialize !== 'function' || typeof transaction.serializeMessage !== 'function'
+          || !bytesEqual(bytes(transaction.serialize({ requireAllSignatures: false, verifySignatures: false }), 1232), reviewed.wire)
+          || !bytesEqual(bytes(transaction.serializeMessage(), 1232), reviewed.message)) throw new Error();
+      }
+      currentSigning(context, 'transaction');
+      const response = context.account
+        ? await context.fn.call(context.receiver, { account: context.account, chain: SOLANA_MAINNET, transaction: reviewed.wire.slice() })
+        : await context.fn.call(context.receiver, transaction);
+      currentSigning(context, 'transaction');
+      let wire;
+      if (context.account) {
+        if (!Array.isArray(response) || response.length !== 1) throw new Error();
+        wire = bytes(response[0]?.signedTransaction, 1232);
+      } else {
+        if (!response || typeof response.serialize !== 'function') throw new Error();
+        wire = bytes(response.serialize({ requireAllSignatures: true, verifySignatures: false }), 1232);
+      }
+      const result = await verifySignedTransaction({ signedTransaction: toBase64(wire), signature: base58Encode(wire.slice(1, 65)) }, reviewed, context.address, crypto);
+      currentSigning(context, 'transaction');
+      return Object.freeze({ ...signedMetadata(context), signature: result.signature, signedTransaction: result.signedTransaction });
+    } catch { throw new Error('Wallet transaction signing was declined, changed or invalid. Nothing was broadcast.'); }
+    finally { pendingSign = false; }
+  }
+
   function dispose() {
     if (disposed) return;
     disposed = true;
@@ -419,5 +596,5 @@ export function createSolanaConnection({ environment = globalThis, onChange = ()
   } catch { /* Legacy detection still works where the Standard event bus is unavailable. */ }
   refreshWallets();
   function getWallets() { refreshWallets(); syncProvider(); return walletList; }
-  return Object.freeze({ connect, disconnect, dispose, getState: syncProvider, getWallets, createReview, isReviewCurrent });
+  return Object.freeze({ connect, disconnect, dispose, getState: syncProvider, getWallets, createReview, isReviewCurrent, signOwnership, signSourceTransaction });
 }

@@ -3,6 +3,7 @@ import {execute, reconcile, getHistory, getPending} from './trade.mjs';
 import {getLaunchpadTokens, mergeLaunchpadMarkets} from './markets.mjs';
 import {createMarketFeed, formatQuantity} from './feed.mjs';
 import {validateRecipient, createSolanaConnection} from './bridge.mjs';
+import {mountBridge} from './bridge-ui.mjs';
 import {CURRENCIES, FX_SOURCE_URL, createCurrencyController, formatQuoteAmount, formatQuoteRatio} from './currency.mjs';
 const $ = id => document.getElementById(id);
 function setLoadState(id, {text, loading = false, error = false}) {
@@ -24,6 +25,7 @@ let poolValuationExpiryTimer;
 let balanceStatus = "idle";
 let currencySnapshot = null;
 let solanaState = {status:'disconnected',address:null}, depositRecipientSource = 'manual', depositReview = null;
+let bridgeUI=null;
 const selectedCurrency = () => currencySnapshot?.currency || 'USD';
 const money = (raw, options = {}) => currencySnapshot ? formatQuoteAmount(raw,currencySnapshot,options) : null;
 const ratioMoney = (numerator,denominator,options = {}) => currencySnapshot ? formatQuoteRatio(numerator,denominator,currencySnapshot,options) : null;
@@ -145,7 +147,7 @@ document.addEventListener('click', event => {
 });
 $('more-button').onclick = () => modal('Network services', `<p>Service availability</p><div class="more-grid"><div>Stake<small class="native-badge">Restricted producer roster</small></div><div>Agents<small class="native-badge">Unavailable</small></div><div>Alexandria<small class="native-badge">Unavailable</small></div><div>Governance<small class="native-badge">Unavailable</small></div></div><p class="footnote">Access pool trading, native asset conversion, account balances and transaction records through this interface.</p>`);
 function docs() {
-  modal('How mainnet trading works', `<p>Solana USDC backs xUSDC on Xeris. The pool trades xUSDC and wXRS, which converts 1:1 to native XRS.</p><ol class="review-list"><li>USDC deposit and redemption services are currently unavailable.</li><li>With xUSDC and native XRS for fees, approve a pool swap in your Xeris wallet.</li><li>Convert the received wXRS to native XRS in Portfolio. Selling reverses these steps.</li></ol><p>The pool takes 0.3% per swap. Each Xeris transaction costs 0.001 native XRS. Review price impact and the minimum received amount before approving each trade.</p><p class="detail-code">${CONFIG.chainId}<br>${CONFIG.rpc}<br>${CONFIG.poolId}</p><p class="footnote">Your wallet signs locally. The website never requests a seed phrase or private key.</p>`);
+  modal('How mainnet trading works', `<p>Solana USDC backs xUSDC on Xeris. The pool trades xUSDC and wXRS, which converts 1:1 to native XRS.</p><ol class="review-list"><li>Bridge availability is checked before each request and payment. A purchase delivers native XRS; withdrawal uses a separate xUSDC redemption.</li><li>With xUSDC and native XRS for fees, approve a pool swap in your Xeris wallet.</li><li>Convert the received wXRS to native XRS in Portfolio. Selling reverses these steps.</li></ol><p>The pool takes 0.3% per swap. Each Xeris transaction costs 0.001 native XRS. Review price impact and the minimum received amount before approving each trade.</p><p class="detail-code">${CONFIG.chainId}<br>${CONFIG.rpc}<br>${CONFIG.poolId}</p><p class="footnote">Your wallet signs locally. The website never requests a seed phrase or private key.</p>`);
 }
 document.querySelectorAll('[data-docs]').forEach(el => el.onclick = docs);
 function renderChart() {
@@ -429,7 +431,7 @@ $('swap-form').onsubmit = async e => {
   const valuation = activeTradeValuation();
   if (!valuation) { scheduleQuote(); message('Quote expired. Review the refreshed amount before signing.'); return; }
   const q = quote, owner = address;
-  modal('Review your swap', `<p class="review-amount">${formatAmount(q.inputRaw,q.buying?6:9)} ${q.buying?'xUSDC':'wXRS'}</p>${q.buying?'':'<p>Market value: <strong id="review-market-value"></strong><br><small>Pool spot value before fees and price impact.</small></p>'}<p>${q.buying?'Estimated received':'Estimated proceeds'}: ${formatAmount(q.outputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p>Minimum received: ${formatAmount(q.minimumOutputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p class="footnote">The 0.5% slippage tolerance sets a minimum, not an additional fee. The quoted proceeds already include the 0.3% pool fee and price impact. Network fee: 0.001 native XRS, paid separately.</p><p>${q.buying?'A separate 1:1 unwrap makes the received wXRS native. That step costs another 0.001 XRS.':'This gives you xUSDC on Xeris. Solana USDC redemption is currently unavailable.'}</p><button class="primary wide" id="approve-swap">Approve in wallet</button>`);
+  modal('Review your swap', `<p class="review-amount">${formatAmount(q.inputRaw,q.buying?6:9)} ${q.buying?'xUSDC':'wXRS'}</p>${q.buying?'':'<p>Market value: <strong id="review-market-value"></strong><br><small>Pool spot value before fees and price impact.</small></p>'}<p>${q.buying?'Estimated received':'Estimated proceeds'}: ${formatAmount(q.outputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p>Minimum received: ${formatAmount(q.minimumOutputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p class="footnote">The 0.5% slippage tolerance sets a minimum, not an additional fee. The quoted proceeds already include the 0.3% pool fee and price impact. Network fee: 0.001 native XRS, paid separately.</p><p>${q.buying?'A separate 1:1 unwrap makes the received wXRS native. That step costs another 0.001 XRS.':'This gives you xUSDC on Xeris. Review Solana USDC redemption availability in Bridge after this sale confirms.'}</p><button class="primary wide" id="approve-swap">Approve in wallet</button>`);
   swapReviewQuote = q; $('info-dialog').dataset.swapReview = 'true';
   if (!q.buying) { const marketValue = valuationMoney(valuation.marketValue); $('review-market-value').textContent = marketValue ? `≈ ${marketValue}` : 'Unavailable'; }
   $('approve-swap').onclick = async () => {
@@ -527,6 +529,7 @@ function renderDepositState() {
   const walletName = solanaState.provider || 'your Solana wallet';
   $('solana-wallet-state').textContent = solanaState.status === 'connected' ? `${walletName} connected · Solana funding account` : solanaState.status === 'connecting' ? `Approve the connection in ${walletName}.` : solanaState.status === 'disconnecting' ? `Disconnecting ${walletName}…` : solanaState.error || 'Phantom, Solflare, Backpack and compatible Solana wallets.';
   $('review-deposit-addresses').disabled = solanaState.status !== 'connected' || !recipient;
+  bridgeUI?.render();
 }
 function showBridgeTab(kind, focus = false) {
   for (const name of ['deposit','redeem']) {
@@ -544,7 +547,9 @@ for (const name of ['deposit','redeem']) {
     event.preventDefault(); showBridgeTab(event.key === 'Home' ? 'deposit' : event.key === 'End' ? 'redeem' : name === 'deposit' ? 'redeem' : 'deposit',true);
   };
 }
-const solanaConnection = createSolanaConnection({environment:window,onWalletsChange:() => {
+const solanaConnection = createSolanaConnection({environment:window,
+legacyTransactionFactory:window.solanaWeb3?.Transaction?bytes=>window.solanaWeb3.Transaction.from(bytes):null,
+onWalletsChange:() => {
   if ($('info-dialog').open && $('info-dialog').dataset.solanaPicker === 'true') renderSolanaWalletChoices();
 },onChange:state => {
   solanaState = state;
@@ -616,6 +621,10 @@ $('review-deposit-addresses').onclick = () => {
   } catch(error) { say(error.message); renderDepositState(); }
 };
 renderDepositState();
+bridgeUI=mountBridge({document,solana:solanaConnection,
+  getXeris:()=>({provider,address,balances}),connectXeris:connect,
+  connectSolana:()=>$('solana-connect').click(),convert:conversion,
+  sell:()=>{setDirection(false);location.hash='swap';},sdk:()=>window.solanaWeb3});
 
 const CURRENCY_PREFERENCE_KEY = 'xeris-display-currency-v1';
 let savedCurrency = 'USD';
