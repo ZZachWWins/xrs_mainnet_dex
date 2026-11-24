@@ -14,7 +14,7 @@ This service connects the DEX's Solana USDC purchase and xUSDC redemption screen
 
 ## Current operating limits
 
-The initial journal policy permits at most 500,000 raw USDC per request (USDC has six decimals), one active settlement route, and an explicit local authorization lasting at most 24 hours. Each intent reserves its full exposure before the source transaction is prepared. Raising limits or renewing an authorization is an operator decision, not a browser action.
+The initial journal policy permits at most 500,000 raw USDC per request (USDC has six decimals), one active settlement route, and an explicit local authorization lasting at most 24 hours. The disabled policy example caps the authorization at two requests and 1,000,000 raw USDC in aggregate. Each intent reserves its full exposure and one request before the source transaction is prepared. Cancelled or failed requests retain that authorization's reservation, so repeated dust requests cannot cause unbounded operator gas spending. Same-intent recovery does not consume another request. Exhausting the request count blocks new admission while permitting already-reserved obligations to finish within the remaining identity, money and expiry constraints. Raising limits or renewing an authorization is an operator decision, not a browser action.
 
 Solana deposits/payouts require finalized RPC evidence. Xeris stages require exact signed-wire, receipt, state-accounting and block evidence from the three configured nodes, plus twelve later blocks. This is bounded agreement between the existing nodes; it is not a trustless bridge or a proof of irreversible cross-chain finality. No new bridge fee is added. Trading uses the existing pool fee and price impact; network fees are shown separately.
 
@@ -58,7 +58,7 @@ A session tunnel is sufficient for paused HTTPS verification, not unattended ope
 
 ## Activation and funded acceptance
 
-`deploy/authorization.example.json` is intentionally disabled with placeholder paths and timestamps. It grants no authority. The operator must approve a concrete per-request/aggregate USDC budget, SOL fee/rent ceiling, exact signing identities and expiry. Only then create a private 0600 policy and explicitly activate. Do not reuse closed pilot or wallet-funding permissions. A startup flag alone is insufficient.
+`deploy/authorization.example.json` is intentionally disabled with placeholder paths and timestamps. It grants no authority. The operator must approve a concrete per-request/aggregate USDC budget, maximum request count, SOL fee/rent ceiling, exact signing identities and expiry. Only then create a private 0600 policy and explicitly activate. Do not reuse closed pilot or wallet-funding permissions. A startup flag alone is insufficient. Keep first funded acceptance restricted to the approved participants; the serialized beta's reservation capacity is not an anti-abuse queue for unrestricted traffic.
 
 Before public intake, complete the following with a real user wallet and approved funds:
 

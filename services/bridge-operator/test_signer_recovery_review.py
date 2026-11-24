@@ -45,6 +45,7 @@ class SignerRecoveryReviewTests(unittest.TestCase):
             "schema_version": 1, "policy_id": "settlement-v2-recovery-review",
             "enabled": True, "valid_from": self.now - 1, "expires_at": self.now + 1800,
             "maximum_usdc_raw": AMOUNT, "maximum_total_usdc_raw": AMOUNT,
+            "maximum_requests": 2,
             "maximum_sol_debit_lamports": "10000000", "operator_wallet": OPERATOR, "keys": {},
         }
         for role, public in (("treasury", purchase.TREASURY), ("operator", OPERATOR),
@@ -213,6 +214,7 @@ class SignerRecoveryReviewTests(unittest.TestCase):
             helper.assert_not_called()
         self.assertEqual(self.journal.db.execute("SELECT COUNT(*) FROM settlement_signer_reservations").fetchone()[0], 1)
         self.assertEqual(self.signer.readiness()["remaining_total_usdc_raw"], "0")
+        self.assertEqual(self.signer.readiness()["remaining_requests"], 1)
         changed = {**self.intent, "destination_owner": OWNER}
         self.assertFalse(self.signer.has_reservation(changed))
         with self.assertRaisesRegex(ValueError, "reservation intent"):
@@ -223,6 +225,54 @@ class SignerRecoveryReviewTests(unittest.TestCase):
         self.signer.reserve_intent(self.intent, self.lease)
         self.assertTrue(self.signer.has_reservation(self.intent))
         self.assertEqual(self.signer.readiness()["remaining_total_usdc_raw"], "0")
+        self.assertEqual(self.signer.readiness()["remaining_requests"], 1)
+
+    def test_two_dust_reservations_exhaust_count_despite_unused_usdc_after_cancel_and_restart(self):
+        self.journal.cancel_unfunded(self.intent_id, "Discard unreserved test setup", lease=self.lease)
+        self.journal.release_route(self.intent_id, lease=self.lease)
+        with patch.object(subprocess, "run") as helper:
+            for number in (1, 2):
+                intent = self.accept_intent("dust-" + str(number), "1")
+                lease = self.journal.acquire_route(intent["intent_id"], "review-worker")
+                self.signer.reserve_intent(intent, lease)
+                self.signer.reserve_intent(copy.deepcopy(intent), lease)
+                self.assertEqual(self.signer.readiness()["remaining_requests"], 2-number)
+                self.journal.cancel_unfunded(intent["intent_id"], "Dust reservation remains consumed", lease=lease)
+                self.journal.release_route(intent["intent_id"], lease=lease)
+            self.assertEqual(self.signer.readiness()["remaining_total_usdc_raw"], "499998")
+            third = self.accept_intent("dust-three", "1")
+            lease = self.journal.acquire_route(third["intent_id"], "review-worker")
+            with self.assertRaisesRegex(ValueError, "request count exhausted"):
+                self.signer.reserve_intent(third, lease)
+            self.journal.close()
+            self.reopen()
+            lease = self.journal.acquire_route(third["intent_id"], "review-worker")
+            with self.assertRaisesRegex(ValueError, "request count exhausted"):
+                self.signer.reserve_intent(third, lease)
+            helper.assert_not_called()
+        self.assertEqual(self.journal.db.execute("SELECT COUNT(*) FROM settlement_signer_reservations").fetchone()[0], 2)
+        self.assertEqual(self.signer.readiness()["remaining_requests"], 0)
+        self.assertFalse(self.signer.has_reservation(third))
+
+    def test_lowered_request_count_does_not_strand_a_reserved_active_intent(self):
+        self.policy["maximum_total_usdc_raw"] = "1000000"
+        self.save_policy()
+        self.signer.reserve_intent(self.intent, self.lease)
+        self.journal.cancel_unfunded(self.intent_id, "Prior request retains its slot", lease=self.lease)
+        self.journal.release_route(self.intent_id, lease=self.lease)
+        self.intent = self.accept_intent("active-second")
+        self.intent_id = self.intent["intent_id"]
+        self.lease = self.journal.acquire_route(self.intent_id, "review-worker")
+        plan = self.fund_and_freeze_mint()
+        self.policy["maximum_requests"] = 1
+        self.save_policy()
+        self.assertEqual(self.signer.readiness()["remaining_requests"], 0)
+        self.assertTrue(self.signer.has_reservation(self.intent))
+        self.signer.reserve_intent(self.intent, self.lease)
+        with patch.object(subprocess, "run", side_effect=self.fake_helper) as helper:
+            self.assertTrue(self.signer.sign(self.intent, "mint", plan, self.lease))
+            helper.assert_called_once()
+        self.assertEqual(self.journal.db.execute("SELECT COUNT(*) FROM settlement_signer_reservations").fetchone()[0], 2)
 
     def test_exhausted_reservation_prevents_another_request_even_after_unfunded_cancel(self):
         self.signer.reserve_intent(self.intent, self.lease)

@@ -34,7 +34,7 @@ class OperatorLifecycleTests(unittest.TestCase):
         self.events = []
         self.signer_scope = {'authorized': True, 'policy_id': AUTHORIZATION,
             'signers': [OPERATOR, purchase.TREASURY, payout.FUNDING],
-            'maximum_usdc_raw': '500000', 'remaining_total_usdc_raw': '1000000'}
+            'maximum_usdc_raw': '500000', 'remaining_total_usdc_raw': '1000000', 'remaining_requests': 2}
         self.good_facts = True
         self.on_handle = lambda: self.handlers[signal.SIGTERM]()
         self.on_collect = lambda: None

@@ -87,15 +87,17 @@ class Observer:
 
 
 class Signer:
-    def __init__(self, case):self.case=case;self.calls=[];self.reservations={};self.remaining=5000000
+    def __init__(self, case):self.case=case;self.calls=[];self.reservations={};self.remaining=5000000;self.remaining_requests=2
     def readiness(self):
         return {'authorized':True,'checked_at':self.case.now,'policy_id':POLICY,'signers':[OPERATOR,p.TREASURY,pay.FUNDING],
-            'maximum_usdc_raw':'500000','remaining_total_usdc_raw':str(self.remaining),'expires_at':self.case.now+3600}
+            'maximum_usdc_raw':'500000','remaining_total_usdc_raw':str(self.remaining),
+            'remaining_requests':self.remaining_requests,'expires_at':self.case.now+3600}
     def has_reservation(self,intent):return intent['intent_id'] in self.reservations
     def reserve_intent(self,intent,lease):
         if intent['intent_id'] not in self.reservations:
+            j.require(type(self.remaining_requests) is int and self.remaining_requests>0,'Scope request count exhausted')
             amount=int(intent['amount_raw']);j.require(self.remaining>=amount,'Scope budget exhausted')
-            self.remaining-=amount;self.reservations[intent['intent_id']]=copy.deepcopy(intent)
+            self.remaining-=amount;self.remaining_requests-=1;self.reservations[intent['intent_id']]=copy.deepcopy(intent)
         else:j.require(self.reservations[intent['intent_id']]==intent,'Reservation conflict')
     def sign(self,intent,stage,prepared,lease):
         self.case.db._lease(intent['intent_id'],lease)
@@ -225,6 +227,45 @@ class RuntimeTests(unittest.TestCase):
         identifier,wire=self.start();self.assertEqual(self.signer.remaining,0)
         self.runtime.submit_source(identifier,wire);self.finish(identifier)
         self.assertFalse(self.runtime.readiness()['can_accept_funds'])
+    def test_last_request_slot_can_finish_both_routes_but_cannot_admit_another(self):
+        for action in ('buy','redeem'):
+            with self.subTest(action=action):
+                self.signer.remaining_requests=1
+                identifier=self.accepted(action,client='last-slot-'+action)
+                self.runtime.prepare_source(identifier)
+                self.assertEqual(self.signer.remaining_requests,0)
+                self.assertGreater(self.signer.remaining,0)
+                self.assertTrue(self.runtime.readiness()['can_accept_funds'])
+                stage='deposit' if action=='buy' else 'burn'
+                wire=signed(self.runtime.store.get(identifier,stage)['prepared'])
+                self.make_runtime()
+                self.runtime.submit_source(identifier,wire)
+                self.assertEqual(self.finish(identifier)['status'],'completed')
+                self.assertFalse(self.runtime.readiness()['can_accept_funds'])
+                with self.assertRaisesRegex(ValueError,'New reservation budget exhausted'):
+                    self.runtime.admit_new_request()
+    def test_new_admission_rechecks_count_after_expiring_last_reserved_request(self):
+        self.signer.remaining_requests=1
+        identifier,wire=self.start()
+        self.assertTrue(self.runtime.readiness()['can_accept_funds'])
+        self.now+=61
+        with self.assertRaisesRegex(ValueError,'New reservation budget exhausted'):
+            self.runtime.admit_new_request()
+        self.assertEqual(self.db.status(identifier)['status'],'cancelled')
+        self.assertIsNone(self.db.recovery_items()['active_route']['intent_id'])
+        self.assertEqual(self.signer.remaining_requests,0)
+        self.assertGreater(self.signer.remaining,0)
+        self.assertEqual(self.broadcaster.calls,[])
+    def test_missing_or_malformed_request_capacity_never_admits_new_intents(self):
+        baseline=self.signer.readiness()
+        for value in (None,-1,True,1.0,'2',1001):
+            with self.subTest(remaining_requests=value):
+                scope={**baseline,'remaining_requests':value}
+                if value is None:del scope['remaining_requests']
+                with patch.object(self.signer,'readiness',return_value=scope):
+                    self.assertFalse(self.runtime.readiness()['can_accept_funds'])
+                    with self.assertRaisesRegex(ValueError,'request capacity'):
+                        self.runtime.admit_new_request()
     def test_replacement_signature_after_commit_is_rejected(self):
         identifier,wire=self.start();self.runtime.submit_source(identifier,wire)
         bad=bytearray(base64.b64decode(wire));bad[1]^=1

@@ -87,7 +87,14 @@ class SettlementRuntime:
         require(raw_amount(scope.get('maximum_usdc_raw')) >= self.journal.policy.maximum_usdc_raw and
                 type(scope.get('expires_at')) is int and scope['expires_at'] > self.clock(),
                 'Scoped request budget or authorization lifetime exhausted')
+        require(type(scope.get('remaining_requests')) is int and 0 <= scope['remaining_requests'] <= 1000,
+                'Scoped request capacity is unavailable')
         return scope
+
+    def _require_new_capacity(self, scope):
+        require(scope['remaining_requests'] > 0 and
+                raw_amount(scope.get('remaining_total_usdc_raw')) >= 1 and
+                scope['expires_at'] >= self.clock()+600, 'New reservation budget exhausted')
 
     def readiness(self):
         result = {'can_accept_funds': False, 'routes': {r: False for r in ROUTES.values()},
@@ -97,8 +104,8 @@ class SettlementRuntime:
             scope = self._authorized_scope()
             active_id = self.journal.recovery_items()['active_route']['intent_id']
             reserved = active_id is not None and self.signer.has_reservation(self._intent(active_id)[1])
-            require(reserved or (raw_amount(scope.get('remaining_total_usdc_raw')) >= 1 and
-                                scope['expires_at'] >= self.clock()+600), 'New reservation budget exhausted')
+            if not reserved:
+                self._require_new_capacity(scope)
             require(not any(v['state'] == 'unknown' for v in self.journal.recovery_items()['stages']),
                     'Unresolved submission requires reconciliation')
             self._facts()
@@ -129,6 +136,10 @@ class SettlementRuntime:
             self.expire_unfunded(active)
         require(self.journal.recovery_items()['active_route']['intent_id'] is None,
                 'Settlement capacity is reserved by an unfinished request')
+        require(not self.journal.processing_state()['paused'], 'Processing paused')
+        # Expiring the old active route can consume the last previously
+        # advertised slot. Recheck capacity after that transition.
+        self._require_new_capacity(self._authorized_scope())
 
     def _validate_plan(self, intent, stage, wrapper, *, allow_expired=False):
         require(type(wrapper) is dict and set(wrapper) == {'prepared', 'context', 'expires_at', 'fee_raw'},

@@ -46,7 +46,7 @@ class ScopedPolicy:
                 'Authorization file metadata rejected')
         policy = strict_json(self.path.read_bytes())
         require(type(policy) is dict and set(policy) == {'schema_version', 'policy_id', 'enabled',
-            'valid_from', 'expires_at', 'maximum_usdc_raw', 'maximum_total_usdc_raw',
+            'valid_from', 'expires_at', 'maximum_usdc_raw', 'maximum_total_usdc_raw', 'maximum_requests',
             'maximum_sol_debit_lamports', 'operator_wallet', 'keys'}, 'Invalid signing policy')
         require(policy['schema_version'] == 1 and type(policy['schema_version']) is int and policy['enabled'] is True,
                 'Signing authorization is disabled')
@@ -56,6 +56,8 @@ class ScopedPolicy:
         require(type(policy['valid_from']) is int and type(policy['expires_at']) is int and
                 policy['valid_from'] <= now < policy['expires_at'] and
                 0 < policy['expires_at']-policy['valid_from'] <= 86400, 'Signing authorization expired')
+        require(type(policy['maximum_requests']) is int and 1 <= policy['maximum_requests'] <= 1000,
+                'Invalid signing request limit')
         for key in ('maximum_usdc_raw', 'maximum_total_usdc_raw', 'maximum_sol_debit_lamports'):
             value = policy[key]
             require(type(value) is str and re.fullmatch('[1-9][0-9]{0,19}', value) and int(value) < 2**64, 'Invalid signing limit')
@@ -102,6 +104,11 @@ class LocalScopedSigner:
     def _reserved(self,policy_id):
         return sum(int(r[0]) for r in self.journal.db.execute('SELECT amount_raw FROM settlement_signer_reservations WHERE policy_id=?',(policy_id,)))
 
+    def _reserved_count(self,policy_id):
+        # Reservations remain charged after cancellation/failure. Every new
+        # request can spend gas independently of its USDC size.
+        return self.journal.db.execute('SELECT COUNT(*) FROM settlement_signer_reservations WHERE policy_id=?',(policy_id,)).fetchone()[0]
+
     def has_reservation(self,intent):
         try:
             policy=self.policy.read()
@@ -124,13 +131,15 @@ class LocalScopedSigner:
             if self.has_reservation(intent):return
             require(self.journal.db.execute('SELECT 1 FROM settlement_signer_reservations WHERE intent_id=?',(intent['intent_id'],)).fetchone() is None,'Original reservation policy changed')
             require(policy['expires_at']>=self.journal._now()+600,'Insufficient settlement authorization runway')
+            require(self._reserved_count(policy['policy_id']) < policy['maximum_requests'],
+                    'Settlement reservation request count exhausted')
             amount=int(stored['amount_raw'])
             require(amount<=int(policy['maximum_usdc_raw']) and self._reserved(policy['policy_id'])+amount<=int(policy['maximum_total_usdc_raw']), 'Settlement reservation budget exhausted')
             self.journal.db.execute('INSERT INTO settlement_signer_reservations VALUES(?,?,?,?)',
                 (intent['intent_id'],policy['policy_id'],hashlib.sha256(canonical(intent).encode()).hexdigest(),str(amount)))
 
     def readiness(self):
-        result = {'authorized': False, 'checked_at': self.journal._now(), 'policy_id': None, 'signers': []}
+        result = {'authorized': False, 'checked_at': self.journal._now(), 'policy_id': None, 'signers': [], 'remaining_requests': 0}
         try:
             require(self.can_operate(), 'Operator is stopping')
             policy = self.policy.read()
@@ -142,6 +151,8 @@ class LocalScopedSigner:
                 signers=[policy['operator_wallet'], purchase.TREASURY, payout.FUNDING],
                 maximum_usdc_raw=policy['maximum_usdc_raw'],
                 remaining_total_usdc_raw=str(max(0,int(policy['maximum_total_usdc_raw'])-self._reserved(policy['policy_id']))),
+                maximum_requests=policy['maximum_requests'],
+                remaining_requests=max(0,policy['maximum_requests']-self._reserved_count(policy['policy_id'])),
                 expires_at=policy['expires_at'])
         except Exception:
             pass

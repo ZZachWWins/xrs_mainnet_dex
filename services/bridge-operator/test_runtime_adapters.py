@@ -34,7 +34,7 @@ class AdapterTests(unittest.TestCase):
         self.policy_path=self.root/'authorization.json'
         self.policy={'schema_version':1,'policy_id':'settlement-v2-unit-test','enabled':True,
             'valid_from':self.now-1,'expires_at':self.now+600,'maximum_usdc_raw':'500000',
-            'maximum_total_usdc_raw':'1000000','maximum_sol_debit_lamports':'10000000',
+            'maximum_total_usdc_raw':'1000000','maximum_requests':2,'maximum_sol_debit_lamports':'10000000',
             'operator_wallet':self.operator,'keys':{}}
         for role,pub in (('operator',self.operator),('treasury',p.TREASURY),('solana',payout.FUNDING)):
             path=self.root/(role+'.json')
@@ -87,6 +87,23 @@ class AdapterTests(unittest.TestCase):
         self.signer.node=sys.executable
         self.signer.key_identity_check=lambda entry:False
         self.assertFalse(self.signer.readiness()['authorized'])
+
+    def test_request_limit_is_required_and_exactly_an_integer_between_one_and_one_thousand(self):
+        baseline=copy.deepcopy(self.policy)
+        with patch.object(subprocess,'run') as helper:
+            for value in (None,0,1001,True,False,1.0,'2'):
+                with self.subTest(maximum_requests=value):
+                    self.policy=copy.deepcopy(baseline)
+                    if value is None:del self.policy['maximum_requests']
+                    else:self.policy['maximum_requests']=value
+                    self.save_policy()
+                    with self.assertRaises(ValueError):self.scope.read()
+                    self.assertFalse(self.signer.readiness()['authorized'])
+            helper.assert_not_called()
+        for value in (1,1000):
+            self.policy={**baseline,'maximum_requests':value};self.save_policy()
+            self.assertEqual(self.scope.read()['maximum_requests'],value)
+            self.assertEqual(self.signer.readiness()['remaining_requests'],value-1)
 
     def test_changed_destination_message_and_stale_fence_never_invoke_helper(self):
         changed={**self.intent,'destination_owner':OWNER}
