@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from service import Feed, Handler, Server
+from collector import CollectionError, IdentityError, TransientCollectionError
 
 
 def ready(expires='2000000'):
@@ -48,6 +49,57 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(snapshot['status'], 'unavailable')
         self.assertNotIn('market', snapshot)
         self.assertNotIn('sensitive', json.dumps(snapshot))
+
+    def test_transient_failure_keeps_only_original_unexpired_snapshot_without_republication(self):
+        feed = Feed({})
+        original = ready()
+        original.update(observed_at_ms='1980000', observed_at='original observation')
+        feed.publish(original)
+        def fail(_):
+            feed.stop.set()
+            raise TransientCollectionError('forward-tip race or timeout')
+        feed.collector = fail
+        for now in [1990, 1999.999]:
+            feed.stop.clear()
+            with patch('service.time.time', return_value=now):
+                feed.run()
+                version, snapshot = feed.current()
+            self.assertEqual(version, 1)
+            self.assertIs(snapshot, original)
+            self.assertEqual(snapshot['expires_at_ms'], '2000000')
+            self.assertEqual(snapshot['observed_at_ms'], '1980000')
+        feed.stop.clear()
+        with patch('service.time.time', return_value=2000):
+            feed.run()
+            version, snapshot = feed.current()
+        self.assertEqual(version, 2)
+        self.assertEqual(snapshot['status'], 'unavailable')
+        self.assertNotIn('market', snapshot)
+        self.assertNotIn('expires_at_ms', snapshot)
+
+    def test_identity_and_unclassified_errors_invalidate_even_an_unexpired_snapshot(self):
+        for cause in [IdentityError('wrong checkpoint'), CollectionError('invalid response'), RuntimeError('unknown')]:
+            feed = Feed({})
+            feed.publish(ready())
+            def fail(_):
+                feed.stop.set()
+                raise cause
+            feed.collector = fail
+            with self.subTest(cause=type(cause).__name__), patch('service.time.time', return_value=1990):
+                feed.run()
+                version, snapshot = feed.current()
+                self.assertEqual(version, 2)
+                self.assertEqual(snapshot['status'], 'unavailable')
+                self.assertNotIn('market', snapshot)
+
+    def test_transient_error_without_verified_snapshot_stays_unavailable(self):
+        feed = Feed({})
+        def fail(_):
+            feed.stop.set()
+            raise TransientCollectionError('timeout')
+        feed.collector = fail
+        feed.run()
+        self.assertEqual(feed.current()[1]['status'], 'unavailable')
 
     def test_read_api_returns_503_when_unavailable_and_status_omits_market(self):
         feed = Feed({})

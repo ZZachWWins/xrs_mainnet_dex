@@ -1,9 +1,11 @@
 import copy
 from decimal import Decimal
+import io
 import json
 from pathlib import Path
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+from urllib.error import HTTPError, URLError
 
 import collector
 from aggregate import SupplyUnavailable, public_address
@@ -29,7 +31,7 @@ def responses():
                                 'reserve_a': pool['reserve_a'], 'reserve_b': pool['reserve_b'],
                                 'total_shares': pool['total_lp_shares'], 'fee_bps': 30}}}
     return {
-        (50008, f'/v2/block/slot/{collector.CHECKPOINT_SLOT}'): {'success': True, 'data': {'slot': collector.CHECKPOINT_SLOT, 'hash': collector.CHECKPOINT_HASH}},
+        (50008, f'/v2/block/slot/{collector.CHECKPOINT_SLOT}'): {'success': True, 'data': {'slot': collector.CHECKPOINT_SLOT, 'hash': collector.CHECKPOINT_HASH}, 'attestation': {'chain_id': collector.CHAIN}},
         (50008, '/v2/blocks?page=1&page_size=12'): {'success': True, 'data': [block]},
         (50008, '/v2/stats'): {'success': True, 'data': {'current_slot': 30000, 'block_height': 30000, 'total_accounts': 1}},
         (50008, '/balances'): {company: 199999000000000000},
@@ -196,6 +198,68 @@ class CollectorTests(unittest.TestCase):
                 reader(port, path)
         with self.assertRaises(collector.CollectionError):
             collector.NoRedirect().redirect_request(None, None, None, None, None, None)
+
+    def test_only_exact_checkpoint_uses_archive_and_other_routes_stay_native(self):
+        reader = collector.NodeReader()
+        pin = f'/v2/block/slot/{collector.CHECKPOINT_SLOT}'
+        for port, path, destination in [(50008, pin, 56003), (50008, pin + '?x=1', 50008),
+                                        (50008, '/v2/stats', 50008), (56001, pin, 56001)]:
+            payload = responses()[(50008, pin)] if destination == 56003 else {'success': True}
+            reader.opener.open = Mock(return_value=io.BytesIO(json.dumps(payload).encode()))
+            reader(port, path)
+            request = reader.opener.open.call_args.args[0]
+            self.assertEqual(request.full_url, f'http://127.0.0.1:{destination}{path}')
+            self.assertEqual(reader.opener.open.call_args.kwargs['timeout'], 3)
+            self.assertEqual(reader.opener.open.call_count, 1)
+
+    def test_archive_identity_must_match_and_never_falls_back(self):
+        pin = f'/v2/block/slot/{collector.CHECKPOINT_SLOT}'
+        for kind in ['missing_attestation', 'wrong_chain', 'wrong_hash', 'wrong_slot']:
+            payload = responses()[(50008, pin)]
+            if kind == 'missing_attestation':
+                del payload['attestation']
+            elif kind == 'wrong_chain':
+                payload['attestation']['chain_id'] = 'xeris-testnet'
+            elif kind == 'wrong_hash':
+                payload['data']['hash'] = 'ff' * 32
+            else:
+                payload['data']['slot'] += 1
+            reader = collector.NodeReader()
+            reader.opener.open = Mock(return_value=io.BytesIO(json.dumps(payload).encode()))
+            with self.subTest(kind=kind), self.assertRaises(collector.IdentityError):
+                reader(50008, pin)
+            self.assertEqual(reader.opener.open.call_count, 1)
+            self.assertEqual(reader.opener.open.call_args.args[0].full_url, 'http://127.0.0.1:56003' + pin)
+        with self.assertRaises(collector.IdentityError):
+            collector.verify_checkpoint(None)
+
+    def test_only_actual_transport_timeouts_are_transient(self):
+        for cause, transient in [(TimeoutError(), True), (URLError(TimeoutError()), True),
+                                 (URLError(ConnectionRefusedError()), False),
+                                 (HTTPError('http://127.0.0.1', 503, 'unavailable', {}, None), False)]:
+            reader = collector.NodeReader()
+            reader.opener.open = Mock(side_effect=cause)
+            with self.subTest(cause=type(cause).__name__), self.assertRaises(collector.CollectionError) as raised:
+                reader(50008, '/v2/stats')
+            self.assertEqual(isinstance(raised.exception, collector.TransientCollectionError), transient)
+
+    def test_forward_tip_races_are_transient_but_rewinds_are_not(self):
+        for when in ['stats', 'last_tip']:
+            for delta in [1, -1]:
+                data, calls = responses(), 0
+                def read(port, path):
+                    nonlocal calls
+                    result = copy.deepcopy(data[(port, path)])
+                    if path.startswith('/v2/blocks?'):
+                        calls += 1
+                        if when == 'last_tip' and calls == 2:
+                            result['data'][0]['slot'] += delta
+                    if when == 'stats' and path == '/v2/stats':
+                        result['data']['current_slot'] += delta
+                    return result
+                with self.subTest(when=when, delta=delta), self.assertRaises((collector.CollectionError, SupplyUnavailable)) as raised:
+                    self.run_collect(reader=read)
+                self.assertEqual(isinstance(raised.exception, collector.TransientCollectionError), delta > 0)
 
     def test_graduation_auto_approves_only_verified_pool_and_prices_actual_circulation(self):
         data = responses()

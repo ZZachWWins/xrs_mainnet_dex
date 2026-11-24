@@ -8,7 +8,7 @@ from socketserver import ThreadingMixIn
 import threading
 import time
 
-from collector import CHAIN, collect
+from collector import CHAIN, TransientCollectionError, collect
 
 
 class Feed:
@@ -43,6 +43,13 @@ class Feed:
             started = time.monotonic()
             try:
                 self.publish(self.collector(self.policy))
+            except TransientCollectionError:
+                # Keep only an already verified snapshot within its ORIGINAL
+                # expiry. Do not relabel, republish or extend it after a race.
+                with self.condition:
+                    if self.snapshot['status'] != 'ready' or int(self.snapshot['expires_at_ms']) <= int(time.time() * 1000):
+                        self.publish({'schema_version': '2', 'status': 'unavailable', 'chain_id': CHAIN,
+                                      'reason': 'A complete, consistent mainnet census is temporarily unavailable.'})
             except Exception:
                 # No stale value is advertised as live and no node response or
                 # filesystem detail is returned to public clients on failure.

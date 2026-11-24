@@ -6,6 +6,7 @@ import json
 import re
 import time
 from urllib.parse import quote
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, build_opener, HTTPRedirectHandler, ProxyHandler
 
 from aggregate import aggregate_supply, aggregate_token
@@ -23,6 +24,24 @@ MAX_TIP_AGE_MS = 120_000
 
 class CollectionError(Exception):
     pass
+
+
+class IdentityError(CollectionError):
+    pass
+
+
+class TransientCollectionError(CollectionError):
+    """Only a forward-tip race or an actual transport timeout."""
+
+
+def verify_checkpoint(identity):
+    block = identity.get('data') if isinstance(identity, dict) else None
+    attestation = identity.get('attestation') if isinstance(identity, dict) else None
+    if not isinstance(identity, dict) or identity.get('success') is not True or not isinstance(block, dict) or \
+            type(block.get('slot')) is not int or block['slot'] != CHECKPOINT_SLOT or \
+            block.get('hash') != CHECKPOINT_HASH or not isinstance(attestation, dict) or \
+            attestation.get('chain_id') != CHAIN:
+        raise IdentityError('Mainnet archive checkpoint mismatch.')
 
 
 def uint(value):
@@ -60,15 +79,31 @@ class NodeReader:
     def __call__(self, port, path):
         if port not in (50008, 56001) or not path.startswith('/') or path.startswith('//'):
             raise CollectionError('Invalid node route.')
-        req = Request(f'http://127.0.0.1:{port}{path}', headers={'Accept': 'application/json'})
-        with self.opener.open(req, timeout=3) as response:
-            body = response.read(2 * 1024 * 1024 + 1)
+        checkpoint = port == 50008 and path == f'/v2/block/slot/{CHECKPOINT_SLOT}'
+        destination = 56003 if checkpoint else port
+        req = Request(f'http://127.0.0.1:{destination}{path}',
+                      headers={'Accept': 'application/json', 'Cache-Control': 'no-store'})
+        try:
+            with self.opener.open(req, timeout=3) as response:
+                body = response.read(2 * 1024 * 1024 + 1)
+        except HTTPError as error:
+            # HTTP failure is not evidence of a transport timeout or a tip race.
+            error.close()
+            raise CollectionError('Mainnet read is unavailable.') from None
+        except TimeoutError:
+            raise TransientCollectionError('Mainnet read timed out.') from None
+        except URLError as error:
+            if isinstance(error.reason, TimeoutError):
+                raise TransientCollectionError('Mainnet read timed out.') from None
+            raise CollectionError('Mainnet read is unavailable.') from None
         if len(body) > 2 * 1024 * 1024:
             raise CollectionError('Node response exceeds the census bound.')
         data = json.loads(body, parse_float=Decimal, parse_constant=reject_constant,
                           object_pairs_hook=exact_object)
         if not isinstance(data, dict) or data.get('success') is False or data.get('error') is not None:
             raise CollectionError('Mainnet read is unavailable.')
+        if checkpoint:
+            verify_checkpoint(data)
         return data
 
 
@@ -162,7 +197,7 @@ def launch_census(read, tokens, pools, pool_count, policy):
 
 def collect(policy, read=None):
     if policy.get('chain_id') != CHAIN or not isinstance(policy.get('id'), str) or not policy['id']:
-        raise CollectionError('Wrong circulation policy identity.')
+        raise IdentityError('Wrong circulation policy identity.')
     labeled = policy.get('company_wallets')
     if not isinstance(labeled, list) or any(not isinstance(row, dict) or
             not isinstance(row.get('address'), str) or not isinstance(row.get('role'), str) or
@@ -178,13 +213,14 @@ def collect(policy, read=None):
             raise CollectionError('Census collection exceeded its read deadline.')
         return source(port, path)
     identity = read(50008, f'/v2/block/slot/{CHECKPOINT_SLOT}')
-    if identity.get('success') is not True or identity.get('data', {}).get('hash') != CHECKPOINT_HASH or uint(identity['data'].get('slot')) != CHECKPOINT_SLOT:
-        raise CollectionError('Mainnet checkpoint mismatch.')
+    verify_checkpoint(identity)
     first, blocks = tip(read)
     stats_response = read(50008, '/v2/stats')
     if stats_response.get('success') is not True:
         raise CollectionError('Mainnet statistics are unavailable.')
     stats = stats_response['data']
+    if uint(stats.get('current_slot')) > uint(first['slot']):
+        raise TransientCollectionError('Mainnet advanced during collection.')
     if uint(stats.get('current_slot')) != uint(first['slot']):
         raise CollectionError('Mainnet advanced during collection.')
     balances = read(50008, '/balances')
@@ -204,6 +240,8 @@ def collect(policy, read=None):
     economics = read(56001, '/network/economics')
     pool_detail = read(56001, f'/contract/{POOL}')
     last, _ = tip(read)
+    if uint(last['slot']) > uint(first['slot']):
+        raise TransientCollectionError('Mainnet advanced during collection.')
     bundle = {'tip_start': first, 'tip_end': last, 'stats': stats, 'balances': balances,
               'wrapped_token': wrapped, 'holders': holders, 'holder_count': holder_count,
               'holders_complete': True, 'pools': pools, 'pool_count': pool_count,
