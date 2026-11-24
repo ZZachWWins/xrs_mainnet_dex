@@ -1,0 +1,40 @@
+{
+  "verified_utc": "2026-11-24T03:27:33.671010+00:00",
+  "release": "/opt/xeris-market-feed/releases/circulation-v3-20261124",
+  "schema_version": "2",
+  "chain_id": "xeris-mainnet-v4",
+  "runtime_sha256": {
+    "service.py": "737edc86669df92781e832df0e14ec39c3a7ecb27e9cc918b1626a3007f76413",
+    "collector.py": "d1d901e9132feee80576616b67028da759fdd1ccb7a1d746791730c29c792441",
+    "aggregate.py": "68325952cfb36441cd8224d4300107400d298ea559fa5f3b805c447da4e80aed",
+    "policy.json": "17d080e53f8bc16f58d33e78bdeadbb97eca0ca99e91c99cf1e4b965ad4b33fd"
+  },
+  "nginx_sha256": "d2f9c95338f237dd2e21a28ac19533bdf703d9b9455ee8cde5472eb18551ba80",
+  "unit_sha256": "2e5f54263f52ea97c83391fc02f7c93296c66c1b0b6bf73d235f4e384be471f1",
+  "node_pid": "3233193",
+  "node_pid_unchanged": true,
+  "nginx_unchanged_during_upgrade": true,
+  "feed": {
+    "MainPID": "3264981",
+    "ActiveState": "active",
+    "UnitFileState": "enabled",
+    "MemoryCurrent": "27275264",
+    "MemoryPeak": "27828224",
+    "NRestarts": "0"
+  },
+  "policy_id": "xeris-mainnet-circulation-v2",
+  "basis": "unlocked_on_chain_v2",
+  "as_of": {
+    "slot": "29707",
+    "block_hash": "0ffbd2b2d3e4c0f3639beffaa15229afeac15118bb5a15214531d4d7b00904fc",
+    "block_height": "29707"
+  },
+  "circulating_raw": "200294070791095833",
+  "market_cap_quote_raw": "2850990375662",
+  "native_account_limit": 100,
+  "snapshot_expiry_seconds": 20,
+  "collection_interval_seconds": 5,
+  "keys_accessed": false,
+  "transactions_submitted": 0,
+  "consensus_changes": false
+}

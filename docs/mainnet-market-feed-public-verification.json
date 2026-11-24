@@ -1,0 +1,226 @@
+{
+  "verified_utc": "2026-11-24T03:27:36.049557+00:00",
+  "read_only": true,
+  "schema_version": "2",
+  "supply_http_status": 200,
+  "cors_headers": [
+    "*"
+  ],
+  "snapshot": {
+    "schema_version": "2",
+    "chain_id": "xeris-mainnet-v4",
+    "status": "ready",
+    "observed_at": "2026-11-24T03:27:32.773664+00:00",
+    "observed_at_ms": "1795490852773",
+    "expires_at_ms": "1795490872773",
+    "as_of": {
+      "slot": "29707",
+      "block_hash": "0ffbd2b2d3e4c0f3639beffaa15229afeac15118bb5a15214531d4d7b00904fc",
+      "block_height": "29707"
+    },
+    "supply": {
+      "status": "available",
+      "basis": "unlocked_on_chain_v2",
+      "chain_id": "xeris-mainnet-v4",
+      "slot": "29707",
+      "block_hash": "0ffbd2b2d3e4c0f3639beffaa15229afeac15118bb5a15214531d4d7b00904fc",
+      "decimals": 9,
+      "circulating_raw": "200294070791095833",
+      "total_emitted_raw": "297070791095833",
+      "wrapped_supply_raw": "709700000000",
+      "components_raw": {
+        "native_wallets": "0",
+        "company_native": "200293361091095833",
+        "native_burn_addresses": "0",
+        "native_nonwallet_custody": "0",
+        "wrapped_wallets": "0",
+        "company_wrapped": "0",
+        "wrapped_burn_addresses": "0",
+        "wrapped_nonwallet_custody": "0",
+        "amm_inventory": "709700000000",
+        "inactive_amm_custody": "0",
+        "wrapped_other_custody": "0"
+      },
+      "census": {
+        "native_accounts": 5,
+        "wrapped_holders": 0,
+        "pools": 1,
+        "native_account_limit": 100
+      }
+    },
+    "market": {
+      "token_id": "native_xrs",
+      "symbol": "XRS",
+      "circulating_raw": "200294070791095833",
+      "decimals": "9",
+      "quote_token_id": "xeris_usdc",
+      "quote_symbol": "xUSDC",
+      "quote_decimals": "6",
+      "market_cap_quote_raw": "2850990375662",
+      "price_quote_raw_numerator": "10101886",
+      "price_xrs_raw_denominator": "709700000000",
+      "price_pool_id": "xrs-xusdc-mainnet-v1",
+      "valuation_basis": "circulating_supply",
+      "price_basis": "pool_spot"
+    },
+    "mining": {
+      "total_mined_raw": "297070791095833",
+      "total_staked_raw": "3000000000000",
+      "emission_cap_raw": "500000000000000000",
+      "genesis_allocation_raw": "200000000000000000",
+      "current_block_reward_xrs": "10.0",
+      "last_block_timestamp_ms": "1795490852252",
+      "last_block_age_ms": "521"
+    },
+    "blocks": [
+      {
+        "slot": "29707",
+        "hash": "0ffbd2b2d3e4c0f3639beffaa15229afeac15118bb5a15214531d4d7b00904fc",
+        "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+        "timestamp_ms": "1795490852252",
+        "transaction_count": "0"
+      },
+      {
+        "slot": "29706",
+        "hash": "02cb82729cc2602433425522d26d1b02c6de544bdbd063eeddc16bf479eb869b",
+        "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+        "timestamp_ms": "1795490850154",
+        "transaction_count": "0"
+      },
+      {
+        "slot": "29705",
+        "hash": "0a77ce7fc1dc2fe55ebf3c650473b2c79417c0858a28ac4ab04c8a9030bf90bd",
+        "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+        "timestamp_ms": "1795490847913",
+        "transaction_count": "0"
+      },
+      {
+        "slot": "29704",
+        "hash": "08964d8fd0deafbe633e74027603f4f13f2740ab9fb2550080ec1307cda3847b",
+        "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+        "timestamp_ms": "1795490845853",
+        "transaction_count": "0"
+      },
+      {
+        "slot": "29703",
+        "hash": "0b43c8773791a42087d2b86e86fb5a0231f77bf6268e2f9ed18a5ea1fe82034e",
+        "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+        "timestamp_ms": "1795490843497",
+        "transaction_count": "0"
+      },
+      {
+        "slot": "29702",
+        "hash": "09d61c5bff450f0b29f141f5f6fc015dd1e9f8c3d463962f3741e56db8ef5c1e",
+        "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+        "timestamp_ms": "1795490839745",
+        "transaction_count": "0"
+      },
+      {
+        "slot": "29701",
+        "hash": "0f70ebe400f1ae7aad398faab4cde2643d4ca9226c5392ebd7678fc2fb9298d3",
+        "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+        "timestamp_ms": "1795490835743",
+        "transaction_count": "0"
+      },
+      {
+        "slot": "29700",
+        "hash": "05d73bb2a436a7114937399c2a6f145fc290146a6b1360f19e5caa185186f774",
+        "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+        "timestamp_ms": "1795490831741",
+        "transaction_count": "0"
+      },
+      {
+        "slot": "29699",
+        "hash": "06d3f1795f56ee108c00be1998740470d15c0197a938f4596063d52e18320205",
+        "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+        "timestamp_ms": "1795490827492",
+        "transaction_count": "0"
+      },
+      {
+        "slot": "29698",
+        "hash": "0b05abe0f75581c3243f42a81303e6f038197f5565ddf8a3bb1fe10f1e6a6bf6",
+        "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+        "timestamp_ms": "1795490823738",
+        "transaction_count": "0"
+      },
+      {
+        "slot": "29697",
+        "hash": "0f1f69df288bad657644664d6f372a07e5f69cd564b07a942a606a5652a59d0d",
+        "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+        "timestamp_ms": "1795490821471",
+        "transaction_count": "0"
+      },
+      {
+        "slot": "29696",
+        "hash": "05f3186da7e88e3477a9f845df2d252aedb2f547834bbe0401a9372551a173fd",
+        "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+        "timestamp_ms": "1795490817466",
+        "transaction_count": "0"
+      }
+    ],
+    "policy": {
+      "id": "xeris-mainnet-circulation-v2",
+      "sha256": "87247ef036948fcfa05be8fb43066fd219318b72cc9872215106c29c65aec13d",
+      "company_wallets": [
+        {
+          "address": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+          "role": "Treasury and undistributed genesis allocation"
+        },
+        {
+          "address": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+          "role": "Company producer"
+        },
+        {
+          "address": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+          "role": "Company producer"
+        },
+        {
+          "address": "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX",
+          "role": "Company liquidity wallet; active pool inventory is counted separately"
+        },
+        {
+          "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+          "role": "Company operations wallet"
+        },
+        {
+          "address": "BzyrcS63PR4kxt8WAbtCptsbN1czdSsyTt4AaaWJpKTA",
+          "role": "Company funding wallet"
+        },
+        {
+          "address": "2z5hTrp38oFVzpTx3ZhUNYAhkFjtYkexX98xFukpi8Cs",
+          "role": "Company reserve setup wallet"
+        }
+      ],
+      "included_pool_ids": [
+        "xrs-xusdc-mainnet-v1"
+      ],
+      "automatic_pool_rule": "Protocol-managed launch token, reserved canonical graduation pool ID, verified __launchpad_pool__ owner and active token/XRS pair.",
+      "description": "All unlocked on-chain XRS, including the genesis allocation and mined rewards held in company or public wallets, plus active approved AMM inventory. Company ownership alone does not exclude supply. Staking, unbonding, burn addresses, locked and other contract custody are excluded. Wrapped XRS is counted once.",
+      "native_account_limit": "100"
+    },
+    "coverage": {
+      "complete": true,
+      "native_accounts": "5",
+      "wrapped_holders": "0",
+      "pools": "1",
+      "collection_ms": "21"
+    },
+    "launchpad_tokens": []
+  },
+  "block_hash_verified": true,
+  "sse_frames": [
+    {
+      "status": "ready",
+      "slot": "29707",
+      "circulating_raw": "200294070791095833",
+      "total_mined_raw": "297070791095833"
+    },
+    {
+      "status": "ready",
+      "slot": "29709",
+      "circulating_raw": "200294090791095833",
+      "total_mined_raw": "297090791095833"
+    }
+  ],
+  "live_block_progress_verified": true
+}

@@ -1,5 +1,8 @@
 import {CONFIG, getPool, getQuote, getBalances, checkChain, parseAmount, formatAmount} from './model.mjs';
 import {execute, reconcile, getHistory, getPending} from './trade.mjs';
+import {getLaunchpadTokens, mergeLaunchpadMarkets} from './markets.mjs';
+import {createMarketFeed, formatQuantity} from './feed.mjs';
+import {CURRENCIES, FX_SOURCE_URL, createCurrencyController, formatQuoteAmount, formatQuoteRatio} from './currency.mjs';
 const $ = id => document.getElementById(id);
 let provider = null, address = null, balances = null, buying = true, quote = null;
 let quoteTimer, quoteGeneration = 0, busy = false, poolBusy = false, reconcileBusy = false, historyError = false;
@@ -7,6 +10,49 @@ let connectionGeneration = 0, connecting = false, connectingProvider = null;
 const balanceReads = new Map();
 const listeningProviders = new WeakSet();
 let observations = [], currentPool = null, lastObserved = 0;
+let currencySnapshot = null;
+const selectedCurrency = () => currencySnapshot?.currency || 'USD';
+const money = (raw, options = {}) => currencySnapshot ? formatQuoteAmount(raw,currencySnapshot,options) : null;
+const ratioMoney = (numerator,denominator,options = {}) => currencySnapshot ? formatQuoteRatio(numerator,denominator,currencySnapshot,options) : null;
+function nativeFiat(raw, options = {}) {
+  if (!currentPool || Date.now() - lastObserved > 45000) return null;
+  return ratioMoney(raw * currentPool.reserveB,currentPool.reserveA,options);
+}
+function renderFiatEstimates() {
+  const activeQuote = quote && Date.now() - quote.quotedAt <= 30000 ? quote : null;
+  const pay = activeQuote ? (activeQuote.buying ? money(activeQuote.inputRaw) : nativeFiat(activeQuote.inputRaw)) : null;
+  const receive = activeQuote ? (activeQuote.buying ? nativeFiat(activeQuote.outputRaw) : money(activeQuote.outputRaw)) : null;
+  $('pay-fiat').textContent = pay ? `≈ ${pay}` : '—'; $('receive-fiat').textContent = receive ? `≈ ${receive}` : '—';
+  for (const [id,value] of [['native-fiat',balances ? nativeFiat(balances.nativeRaw) : null],['wrapped-fiat',balances ? nativeFiat(balances.wrappedRaw) : null],['usdc-fiat',balances ? money(balances.usdcRaw) : null]]) {
+    $(id).textContent = value ? `≈ ${value}` : '—';
+  }
+}
+function renderValuations() {
+  const currency = selectedCurrency();
+  document.querySelectorAll('[data-display-currency]').forEach(el => { el.textContent = currency; });
+  document.querySelectorAll('[data-currency-description]').forEach(el => { el.textContent = `${currency} equivalent`; });
+  const snapshot = marketSnapshot?.expiresAt > Date.now() ? marketSnapshot : null;
+  const cap = snapshot ? money(snapshot.marketCapRaw) : null;
+  setFeedValue('market-cap',cap && cap.length > 19 ? money(snapshot.marketCapRaw,{compact:true,maximumFractionDigits:2}) : cap || '—');
+  document.querySelectorAll('[data-feed="market-cap"]').forEach(el => {
+    if (snapshot && cap) { const detail = `${money(snapshot.marketCapRaw,{maximumFractionDigits:6})} equivalent · ${formatQuantity(snapshot.marketCapRaw,6)} xUSDC`; el.title = detail; el.setAttribute('aria-label',`XRS market capitalization: ${detail}`); }
+    else { el.removeAttribute('title'); el.setAttribute('aria-label',`XRS market capitalization in ${currency} unavailable`); }
+  });
+  const compact = snapshot ? money(snapshot.marketCapRaw,{compact:true,maximumFractionDigits:2}) : null;
+  $('xrs-market-cap').textContent = compact || '—';
+  const exactCap = snapshot && cap ? `${money(snapshot.marketCapRaw,{maximumFractionDigits:6})} equivalent · ${formatQuantity(snapshot.marketCapRaw,6)} xUSDC` : `${currency} valuation unavailable`;
+  $('xrs-market-ticker').title = exactCap; $('xrs-market-ticker').setAttribute('aria-label',`XRS market capitalization: ${exactCap}`);
+  $('spot-price').textContent = nativeFiat(1000000000n,{maximumFractionDigits:8}) || '—';
+  $('spot-description').textContent = `${currency} equivalent per XRS · pool spot price`;
+  $('display-currency').value = currency;
+  $('fx-source').href = FX_SOURCE_URL;
+  if (currency === 'USD') $('fx-status').textContent = 'USD reference · xUSDC intended 1:1 USDC backing';
+  else if (currencySnapshot?.status === 'ready' && currencySnapshot.expiresAt > Date.now()) {
+    const timestamp = new Date(currencySnapshot.asOf).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    $('fx-status').textContent = `${currency} / USD FX quote · ${timestamp} · xUSDC 1:1 USD reference`;
+  } else $('fx-status').textContent = `${currency} FX ${currencySnapshot?.status === 'loading' ? 'updating' : 'unavailable'} · token quotes remain in their native units`;
+  renderMarkets(); renderChart(); renderFiatEstimates();
+}
 const say = message => { $('toast').textContent = message; $('toast').classList.remove('hidden'); clearTimeout(say.timer); say.timer = setTimeout(() => $('toast').classList.add('hidden'), 9000); };
 const message = (text, error = false) => { $('trade-message').textContent = text; $('trade-message').classList.toggle('error', error); };
 function modal(title, html) { $('dialog-title').textContent = title; $('dialog-body').innerHTML = html; if (!$('info-dialog').open) $('info-dialog').showModal(); }
@@ -15,7 +61,7 @@ $('close-dialog').onclick = closeModal;
 $('info-dialog').addEventListener('click', e => { if (e.target === $('info-dialog')) closeModal(); });
 function route() {
   const id = location.hash.slice(1) || location.pathname.replace(/^\/|\/$/g,'') || 'home';
-  const allowed = ['home','swap','pools','bridge','portfolio','activity'];
+  const allowed = ['home','swap','pools','bridge','network','portfolio','activity'];
   const page = allowed.includes(id) ? id : 'home';
   document.querySelectorAll('main>.page').forEach(el => el.classList.toggle('hidden', el.id !== page));
   document.querySelectorAll('nav a').forEach(el => el.classList.toggle('active', el.hash === '#' + page));
@@ -32,7 +78,11 @@ function docs() {
 }
 document.querySelectorAll('[data-docs]').forEach(el => el.onclick = docs);
 function renderChart() {
-  if (!observations.length) return;
+  if (!observations.length || !money(1000000n)) {
+    $('chart-line').setAttribute('d',''); $('chart-area').setAttribute('d',''); $('chart-point').classList.add('hidden');
+    $('chart-caption').textContent = `${selectedCurrency()} price observations unavailable.`; return;
+  }
+  $('chart-point').classList.remove('hidden');
   const values = observations.map(v => v.price), min = Math.min(...values), max = Math.max(...values);
   const range = Math.max(max - min, max * .003, .00000001);
   const center = (max + min) / 2;
@@ -41,7 +91,7 @@ function renderChart() {
   $('chart-line').setAttribute('d', path);
   $('chart-area').setAttribute('d', points.length > 1 ? `${path} L${points.at(-1)[0]} 290 L${points[0][0]} 290 Z` : '');
   const [x,y] = points.at(-1); $('chart-point').setAttribute('cx',x); $('chart-point').setAttribute('cy',y);
-  $('chart-caption').textContent = 'Pool pricing in xUSDC. Refreshed every 30 seconds.';
+  $('chart-caption').textContent = `Session observations · ${selectedCurrency()} equivalents using the current display rate.`;
 }
 async function refreshPool() {
   if (poolBusy) return;
@@ -50,26 +100,129 @@ async function refreshPool() {
     await checkChain();
     const pool = await getPool(); currentPool = pool; lastObserved = Date.now();
     const price = formatAmount(pool.reserveB * 100000000000n / pool.reserveA, 8);
-    $('spot-price').textContent = price; $('ticker-price').textContent = price;
-    $('ticker-reserve').textContent = `${formatAmount(pool.reserveB,6,4)} xUSDC`;
     $('reserve-a').textContent = formatAmount(pool.reserveA,9,5); $('reserve-b').textContent = formatAmount(pool.reserveB,6);
     $('list-reserve-a').textContent = formatAmount(pool.reserveA,9); $('list-reserve-b').textContent = formatAmount(pool.reserveB,6);
     $('connection-status').textContent = 'Mainnet connected';
     const time = new Date(lastObserved).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
     $('observed-time').textContent = time; $('pool-refresh-status').textContent = `Updated ${time}`;
-    observations.push({time:lastObserved,price:Number(price)}); if (observations.length > 90) observations.shift(); renderChart();
+    observations.push({time:lastObserved,price:Number(price)}); if (observations.length > 90) observations.shift(); renderValuations();
   } catch (error) {
     $('connection-status').textContent = 'Mainnet unavailable';
     $('pool-refresh-status').textContent = currentPool ? 'Last known pool values · refresh unavailable' : error.message;
-  } finally { poolBusy = false; $('refresh-pool').disabled = false; }
+  } finally { poolBusy = false; $('refresh-pool').disabled = false; renderValuations(); }
 }
 $('refresh-pool').onclick = refreshPool;
+let marketSnapshot = null, launchpadRegistry = null, marketsBusy = false;
+function marketMethodology() {
+  modal('Circulating market capitalization', '<p>Market capitalization is the current pool price multiplied by circulating supply. The on-chain quote is in xUSDC. Financial estimates use its intended 1:1 USDC backing as a USD reference, then apply current FX for your selected currency.</p><p>All unlocked on-chain XRS is included: genesis allocations, mined wallet balances and active approved AMM inventory. Treasury and company ownership alone do not exclude holdings. Burned, staked and locked balances are excluded; wrapped XRS is counted once.</p><p class="footnote">These are USD-equivalent estimates, not a guaranteed redemption price. xUSDC is issued by the Xeris treasury and is separate from Circle-issued USDC. A dash means pricing, circulating supply or a current FX quote is unavailable; expired FX rates are never reused.</p><a class="button outline" href="#network" id="view-market-network">View network intelligence</a>');
+  $('view-market-network').onclick = closeModal;
+}
+$('xrs-market-ticker').onclick = marketMethodology;
+function supplyMethodology() {
+  marketMethodology();
+  if (!marketSnapshot) return;
+  $('dialog-title').textContent = 'Circulating supply policy';
+  const intro = document.createElement('p'); intro.textContent = marketSnapshot.policy.description;
+  const label = document.createElement('h3'); label.textContent = 'Company wallets · unlocked holdings included';
+  const list = document.createElement('div'); list.className = 'policy-wallets';
+  for (const row of marketSnapshot.policy.companyWallets) {
+    const item = document.createElement('div'), role = document.createElement('strong'), address = document.createElement('span');
+    role.textContent = row.role; address.textContent = row.address; item.append(role,address); list.append(item);
+  }
+  const policy = document.createElement('p'); policy.className = 'footnote'; policy.textContent = `Policy: ${marketSnapshot.policy.id}. As of block ${marketSnapshot.slot}.`;
+  $('dialog-body').replaceChildren(intro,label,list,policy);
+}
+$('supply-methodology').onclick = supplyMethodology;
+function renderMarkets() {
+  const nodes = [];
+  try {
+    if (!launchpadRegistry) throw new Error('Listings unavailable');
+    for (const token of mergeLaunchpadMarkets(launchpadRegistry, marketSnapshot)) {
+      const button = document.createElement('button'); button.className = 'market-ticker';
+      const exactValue = token.marketCapRaw === null ? null : formatQuantity(token.marketCapRaw,6);
+      button.title = `${token.name} · ${token.id}${exactValue === null ? '' : ' · ' + exactValue + ' xUSDC'}`;
+      const fullMoney = token.marketCapRaw === null ? null : money(token.marketCapRaw,{maximumFractionDigits:6});
+      const valueText = token.marketCapRaw === null ? '—' : money(token.marketCapRaw,{compact:true,maximumFractionDigits:2}) || '—';
+      button.setAttribute('aria-label', `${token.symbol} market capitalization ${fullMoney === null ? selectedCurrency() + ' equivalent unavailable' : fullMoney + ' equivalent · ' + exactValue + ' xUSDC'}`);
+      const symbol = document.createElement('b'); symbol.textContent = token.symbol;
+      const label = document.createElement('small'); label.textContent = 'Market cap';
+      const value = document.createElement('strong'); value.textContent = valueText;
+      const unit = document.createElement('span'); unit.className = 'ticker-unit'; unit.textContent = selectedCurrency();
+      button.append(symbol,label,value,unit); button.onclick = marketMethodology; nodes.push(button);
+    }
+    if (!nodes.length) {
+      const empty = document.createElement('span'); empty.className = 'market-ticker market-empty';
+      empty.textContent = 'Launchpad markets · No listings yet'; nodes.push(empty);
+    }
+  } catch {
+    const status = document.createElement('span'); status.className = 'market-ticker market-empty';
+    status.textContent = 'Launchpad markets unavailable'; nodes.splice(0,nodes.length,status);
+  }
+  $('launchpad-tickers').replaceChildren(...nodes);
+}
+async function refreshMarkets() {
+  if (marketsBusy) return;
+  marketsBusy = true;
+  try { await checkChain(); launchpadRegistry = await getLaunchpadTokens(); }
+  catch { launchpadRegistry = null; }
+  finally { marketsBusy = false; renderMarkets(); }
+}
+const timeLabel = millis => new Date(millis).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+function setFeedValue(name, value) { document.querySelectorAll(`[data-feed="${name}"]`).forEach(el => { el.textContent = value; }); }
+let lastBlockHashes = new Set();
+function renderNetwork(state) {
+  marketSnapshot = state.status === 'ready' ? state : null;
+  const label = state.status === 'ready' ? 'Updating live' : state.status === 'paused' ? 'Paused' : state.status === 'stale' ? 'Data expired' : 'Reconnecting';
+  $('network-live-status').textContent = label; $('network-live-status').dataset.state = state.status;
+  setFeedValue('state',label);
+  if (!marketSnapshot) {
+    ['circulating','market-cap','mined','slot'].forEach(name => setFeedValue(name,'—'));
+    $('xrs-market-cap').textContent = '—'; $('xrs-market-ticker').setAttribute('aria-label','XRS market capitalization unavailable');
+    $('xrs-market-ticker').title = 'XRS market capitalization unavailable';
+    document.querySelectorAll('[data-feed="market-cap"]').forEach(el => el.removeAttribute('title'));
+    document.querySelectorAll('[data-feed="mined"], [data-feed="circulating"]').forEach(el => { el.removeAttribute('title'); el.removeAttribute('aria-label'); });
+    $('block-reward').textContent = '—'; $('block-observed-time').textContent = 'Awaiting network';
+    $('network-update-time').textContent = state.reason || 'Connecting to the public feed.';
+    $('block-stream-status').textContent = state.reason || 'Connecting to mainnet…';
+    $('block-stream-status').classList.remove('hidden'); $('block-rows').replaceChildren();
+    renderValuations(); return;
+  }
+  setFeedValue('circulating',formatQuantity(state.circulatingRaw,9,2));
+  document.querySelectorAll('[data-feed="circulating"]').forEach(el => { const exact = `${formatQuantity(state.circulatingRaw,9)} XRS`; el.title = exact; el.setAttribute('aria-label', `Circulating supply: ${exact}`); });
+  setFeedValue('mined',formatQuantity(state.minedRaw,9,2));
+  document.querySelectorAll('[data-feed="mined"]').forEach(el => { const exact = `${formatQuantity(state.minedRaw,9)} XRS`; el.title = exact; el.setAttribute('aria-label', `Total mined: ${exact}`); });
+  setFeedValue('slot',formatQuantity(state.slot,0));
+  $('block-reward').textContent = `${state.reward.replace(/(\.\d*?[1-9])0+$|\.0+$/,'$1')} XRS`;
+  $('block-observed-time').textContent = timeLabel(state.blocks[0].timestamp);
+  $('network-update-time').textContent = `Census updated ${timeLabel(state.observedAt)}`;
+  $('block-stream-status').classList.add('hidden');
+  const rows = state.blocks.map(block => {
+    const tr = document.createElement('tr');
+    if (lastBlockHashes.size && !lastBlockHashes.has(block.hash)) tr.className = 'new-block';
+    const slot = document.createElement('td'), blockNumber = document.createElement('strong'), hash = document.createElement('span');
+    blockNumber.textContent = formatQuantity(block.slot,0); hash.textContent = block.hash.slice(0,8) + '…' + block.hash.slice(-6); hash.className = 'block-hash'; hash.title = block.hash; slot.append(blockNumber,hash);
+    const time = document.createElement('td'); time.textContent = timeLabel(block.timestamp); time.title = new Date(block.timestamp).toLocaleString();
+    const producer = document.createElement('td'); producer.textContent = block.proposer.slice(0,6) + '…' + block.proposer.slice(-5); producer.title = block.proposer; producer.className = 'producer-address';
+    const tx = document.createElement('td'); tx.textContent = formatQuantity(block.transactionCount,0);
+    tr.append(slot,time,producer,tx); return tr;
+  });
+  lastBlockHashes = new Set(state.blocks.map(row => row.hash)); $('block-rows').replaceChildren(...rows); renderValuations();
+}
+const marketFeed = createMarketFeed({onState:renderNetwork});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { marketFeed.stop(); currencyController.stop(); }
+  else { marketFeed.start(); currencyController.start(); refreshMarkets(); }
+});
+window.addEventListener('pagehide', () => { marketFeed.stop(); currencyController.stop(); });
+window.addEventListener('pageshow', () => { if (!document.hidden) { marketFeed.start(); currencyController.start(); } });
+
 function renderBalances() {
   $('wallet-address').textContent = address || 'Connect your Xeris wallet to view balances.';
   $('native-balance').textContent = balances ? formatAmount(balances.nativeRaw,9) : '—';
   $('wrapped-balance').textContent = balances ? formatAmount(balances.wrappedRaw,9) : '—';
   $('usdc-balance').textContent = balances ? formatAmount(balances.usdcRaw,6) : '—';
   $('pay-balance').textContent = balances ? `Balance: ${formatAmount(buying ? balances.usdcRaw : balances.wrappedRaw,buying?6:9,6)}` : 'Connect for balance';
+  renderFiatEstimates();
 }
 async function refreshBalances() {
   if (!address) return;
@@ -137,7 +290,7 @@ function setDirection(value) {
   renderBalances(); scheduleQuote();
 }
 $('buy-tab').onclick = () => setDirection(true); $('sell-tab').onclick = () => setDirection(false); $('reverse').onclick = () => setDirection(!buying);
-function clearQuote() { quote = null; ['minimum-output','price-impact','receive-amount'].forEach(id => $(id).textContent = '—'); $('trade-fee').textContent = '0.3%'; updateAction(); }
+function clearQuote() { quote = null; ['minimum-output','price-impact','receive-amount'].forEach(id => $(id).textContent = '—'); $('trade-fee').textContent = '0.3%'; renderFiatEstimates(); updateAction(); }
 function scheduleQuote() {
   const generation = ++quoteGeneration; clearTimeout(quoteTimer); clearQuote();
   if (!$('pay-amount').value.trim()) { message('Enter an amount to get a live quote.'); return; }
@@ -153,7 +306,7 @@ function scheduleQuote() {
       $('price-impact').textContent = result.priceImpactPercent + '%';
       $('trade-fee').textContent = `${formatAmount(result.feeRaw,direction?6:9)} ${direction?'xUSDC':'wXRS'}`;
       message(Number(result.priceImpactPercent) >= 5 ? 'This small pool gives this trade a price impact of 5% or more. Review the amount carefully.' : direction ? 'Swap to wXRS, then convert it 1:1 to native XRS.' : 'Selling native XRS? Convert it to wXRS in Portfolio first.');
-      updateAction();
+      renderFiatEstimates(); updateAction();
     } catch(error) { if (generation === quoteGeneration) { clearQuote(); message(error.message,true); } }
   },650);
 }
@@ -224,5 +377,20 @@ async function reconcilePending() {
   finally { reconcileBusy=false; $('reconcile-button').disabled=false; }
 }
 $('reconcile-button').onclick=reconcilePending;
-route(); refreshPool(); updateAction();
+const CURRENCY_PREFERENCE_KEY = 'xeris-display-currency-v1';
+let savedCurrency = 'USD';
+try { const preference = localStorage.getItem(CURRENCY_PREFERENCE_KEY); if (CURRENCIES.some(item => item.code === preference)) savedCurrency = preference; } catch {}
+$('display-currency').replaceChildren(...CURRENCIES.map(item => { const option = document.createElement('option'); option.value = item.code; option.textContent = item.code; option.title = item.label; option.setAttribute('aria-label',item.label); return option; }));
+const currencyController = createCurrencyController({initialCurrency:savedCurrency,onChange:snapshot => { currencySnapshot = snapshot; renderValuations(); }});
+currencySnapshot = currencyController.getSnapshot();
+$('display-currency').value = savedCurrency;
+$('display-currency').onchange = () => {
+  const code = $('display-currency').value;
+  if (!CURRENCIES.some(item => item.code === code)) return;
+  try { localStorage.setItem(CURRENCY_PREFERENCE_KEY,code); } catch {}
+  currencyController.select(code);
+};
+route(); refreshPool(); refreshMarkets(); updateAction(); renderValuations();
+if (!document.hidden) { marketFeed.start(); currencyController.start(); }
+setInterval(() => { if (!document.hidden) refreshMarkets(); }, 60000);
 setInterval(()=>{ if (!document.hidden && !busy) refreshPool(); if (quote && Date.now()-quote.quotedAt>30000) { clearQuote(); message('Quote expired. Refresh by editing the amount.'); } },30000);

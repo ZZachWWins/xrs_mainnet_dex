@@ -1,6 +1,6 @@
 # Xeris Mainnet DEX
 
-A new browser client for the deployed Xeris mainnet commissioning pool, using the original design, logo, token icons and fonts recovered from `dex.xerisweb.com`. This repository replaces the unavailable placeholder source. It contains public frontend code only; it does not contain treasury keys, reserve keys, wallet seeds or node state.
+A new browser client for the deployed Xeris mainnet pool, using the original design, logo, token icons and fonts recovered from `dex.xerisweb.com`. This repository replaces the unavailable placeholder source. It contains public frontend and read-only market-feed source; it does not contain treasury keys, reserve keys, wallet seeds or node state.
 
 ## Run and test
 
@@ -18,6 +18,8 @@ The local preview is `http://127.0.0.1:8769`. `dist/` contains the maintained HT
 
 - Homepage and responsive trading layout preserving the existing Xeris visual design.
 - Live mainnet pool reserves, exact integer quotes, fee/minimum output and price impact.
+- A persistent MAINNET BETA market strip: circulating XRS market cap plus protocol launchpad listings. On-chain valuations remain xUSDC; the interface shows USD equivalents by default and supports current FX conversion into 14 other major currencies. Pool depth and LP fees stay off the header.
+- Live Network view: circulating supply, actual mined emissions, scheduled block reward and the latest 12 blocks, with a compact homepage overview. A read-only SSE feed updates data; expired snapshots clear immediately.
 - Pool and portfolio views, distinct native XRS / wXRS / xUSDC balances.
 - Explicit Xeris wallet provider connection and mainnet/checkpoint binding.
 - One wallet-approved action at a time: xUSDC → wXRS, wXRS → xUSDC, wrap or unwrap.
@@ -53,8 +55,40 @@ The interface does not claim that this new client/operator code was covered by t
 
 ## Validation
 
-`npm test` runs 65 offline tests covering exact amounts, lossless JSON, pool identity, quote matching, wallet binding, transaction encoding, signature verification, balances/gas, storage failures, stale quotes, ambiguous submissions and receipt recovery. Codec bytes independently match all four action types from the public completed pilot artifacts. Tests use synthetic in-memory keys and mocked network writes. Browser checks use public mainnet reads; they do not spend funds.
+`npm test` runs 104 offline tests covering exact amounts, lossless JSON, pool identity, quote matching, wallet binding, transaction encoding, signature verification, balances/gas, storage failures, stale quotes, ambiguous submissions and receipt recovery. Codec bytes independently match all four action types from the public completed pilot artifacts. Tests use synthetic in-memory keys and mocked network writes. Browser checks use public mainnet reads; they do not spend funds.
 
 Image and font origins are recorded in `asset-manifest.json`. Live chart points are observations from the current browser session, not fabricated historic candles. LP fees remain in pool reserves for LP shareholders; there is no separate 0.777% company cut in this pool.
 
 The independent end-to-end harness additionally exercises the complete four-step Xeris round trip and a lost submission response through the actual client modules, preserving the original transaction ID across a simulated reload. This is offline application validation, not a funded browser/Web4 or Solana settlement run. Font license notices are included in `dist/assets/licenses/`.
+
+## Market capitalization and live network data
+
+Market cap is current pool price multiplied by circulating supply. The API denomination is **xUSDC**; the interface displays **USD-equivalent** estimates using intended 1:1 xUSDC/USDC backing, then converts to the selected fiat currency. This is not an independent xUSDC/USD market price or a redemption guarantee. The read-only feed uses a consistent on-chain census. All unlocked on-chain XRS counts, including unlocked genesis premine, mined wallet balances and active approved AMM inventory. Company or treasury ownership alone does not exclude holdings. Actual burned, staked and locked balances are excluded. Wrapped XRS is counted once. The interface never substitutes maximum supply, gross emissions or wrapped supply for circulation, and displays no FDV.
+
+The feed is read from the configured mainnet origin:
+
+- `GET /market/supply`: initial snapshot and fallback polling.
+- `GET /market/stream`: named SSE `snapshot` events, automatic reconnect.
+- `GET /market/status`: operational endpoint, not needed for display polling.
+
+The client requires schema version 2, supply basis `unlocked_on_chain_v2`, and policy ID `xeris-mainnet-circulation-v2`. It validates the chain, denomination, complete census flag, matching block identities, exact circulation arithmetic and price/cap multiplication. Native-wallet, company-native, wrapped-wallet, company-wrapped and active AMM components are added once; protocol launch tokens likewise include unlocked company-wallet balances. Version 1 feeds fail closed rather than reusing the old ownership-based exclusions. It preserves large integer amounts with the lossless JSON parser. Expired or invalid snapshots clear market caps, supply and block rows; the client does not extrapolate emissions or invent counters. An SSE failure changes the visible state and starts one fallback read every eight seconds. Successful streaming cancels polling. Hidden tabs close the stream and clear timers, then reconnect on return.
+
+Protocol launchpad discovery remains separate through `/v2/tokens?limit=32&after=...`, filtering `LaunchpadManaged` and `__launchpad_managed__`. Feed valuations join only on matching token ID, name and symbol, with circulation bounded by issued supply. The feed supplies exact canonical token/XRS pricing converted through the native XRS/xUSDC ratio. Missing prices or circulation display a dash. Incomplete or failed registry pagination shows an unavailable state, not an empty successful launchpad.
+
+The Network policy dialog lists public company wallets for transparency and explicitly marks their unlocked holdings as included. Market-cap headers use compact million/billion notation while the Network view displays the full amount to two decimals; titles and accessible labels retain exact values. This is a read-only application integration; it adds no consensus, issuance, custody or mining behavior. The client displays collector-reported data and consistency checks, not an independent full-node proof.
+
+## Live supply and mining service
+
+The independently deployed read-only service is documented in [`services/market-feed/README.md`](services/market-feed/README.md). Source, published circulation policy and 57 Python accounting/HTTP/streaming tests are included. Netlify serves only `dist/`; it does not deploy this service. The service runs on the RPC host with no node/key-directory access. The existing node processes and consensus code were not changed.
+
+The [iOS endpoint handoff](docs/mainnet-ios-defi-endpoints.md) records all current public DeFi routes, transaction requirements and the new JSON/SSE market APIs. The [wallet signature note](docs/mainnet-wallet-signature-status.md) distinguishes hybrid block authentication from current Ed25519 wallet spending.
+
+## Display currencies
+
+USD is the default. The header selector also supports EUR, GBP, JPY, CHF, CAD, AUD, CNY, INR, KRW, BRL, SGD, AED, ZAR and MXN. Monetary values use the appropriate symbol and distinguish ambiguous currencies. Native/wrapped/token quantities, percentage fees, quotes and signed transaction amounts retain their original units. Compact header values have more precise accessible labels; full card amounts are compacted only when needed to fit.
+
+`dist/currency.mjs` reads the selected pair directly from [biquote](https://biquote.io/docs/) using `cache: "no-store"`, no credentials and strict provider freshness. It refreshes every 12 seconds while the page is active and when a currency is selected or the page resumes. Only the currency preference is persisted. FX quotes are exact decimal ratios; raw monetary amounts never pass through floating point.
+
+Closed, stale, missing, malformed or 60-second-old quotes are unavailable. A valid in-memory quote may remain visible while the next request is pending, only until its original expiry; request failure clears it. No stale or saved rate is used as fallback. HTTP 429/503 retry delays are respected. The footer identifies the source quote timestamp. Regional closures and weekends can make non-USD estimates unavailable. These are indicative quotes; the free provider offers no SLA. Its [terms](https://biquote.io/terms.html) permit derived product display, but no raw FX relay/API is deployed.
+
+The interface uses restrained text statuses without glowing status dots or outlined badges. MAINNET BETA remains visible on every page.

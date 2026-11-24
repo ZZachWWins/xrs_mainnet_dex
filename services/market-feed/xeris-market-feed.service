@@ -1,0 +1,54 @@
+[Unit]
+Description=Xeris public read-only market and mining feed
+Wants=network-online.target
+After=network-online.target
+# No Requires, BindsTo or restart relationship with any blockchain producer.
+
+[Service]
+Type=simple
+DynamicUser=yes
+User=xeris-market-feed
+WorkingDirectory=/opt/xeris-market-feed/current
+ExecStart=/usr/bin/python3 /opt/xeris-market-feed/current/service.py --host 127.0.0.1 --port 56100 --policy /opt/xeris-market-feed/current/policy.json
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=10s
+UMask=0077
+
+# The feed has no key access or node-directory access. All collection uses
+# fixed read-only routes on existing loopback HTTP listeners.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+InaccessiblePaths=-/var/lib/xeris -/etc/xeris -/etc/letsencrypt -/root -/home
+ReadOnlyPaths=/opt/xeris-market-feed
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=localhost
+
+MemoryAccounting=yes
+MemoryHigh=48M
+MemoryMax=64M
+TasksMax=64
+CPUQuota=20%
+LimitNOFILE=256
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

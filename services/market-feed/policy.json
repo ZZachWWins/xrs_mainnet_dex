@@ -1,0 +1,24 @@
+{
+  "id": "xeris-mainnet-circulation-v2",
+  "chain_id": "xeris-mainnet-v4",
+  "company_addresses": [
+    "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+    "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+    "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+    "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX",
+    "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+    "BzyrcS63PR4kxt8WAbtCptsbN1czdSsyTt4AaaWJpKTA",
+    "2z5hTrp38oFVzpTx3ZhUNYAhkFjtYkexX98xFukpi8Cs"
+  ],
+  "company_wallets": [
+    {"address": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL", "role": "Treasury and undistributed genesis allocation"},
+    {"address": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1", "role": "Company producer"},
+    {"address": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH", "role": "Company producer"},
+    {"address": "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX", "role": "Company liquidity wallet; active pool inventory is counted separately"},
+    {"address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT", "role": "Company operations wallet"},
+    {"address": "BzyrcS63PR4kxt8WAbtCptsbN1czdSsyTt4AaaWJpKTA", "role": "Company funding wallet"},
+    {"address": "2z5hTrp38oFVzpTx3ZhUNYAhkFjtYkexX98xFukpi8Cs", "role": "Company reserve setup wallet"}
+  ],
+  "included_pool_ids": ["xrs-xusdc-mainnet-v1"],
+  "burn_addresses": ["11111111111111111111111111111111"]
+}

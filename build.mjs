@@ -1,6 +1,6 @@
 import { access, readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
-const modules=['dist/app.mjs','dist/model.mjs','dist/trade.mjs'];
+const modules=['dist/app.mjs','dist/model.mjs','dist/trade.mjs','dist/markets.mjs','dist/feed.mjs','dist/currency.mjs'];
 for(const file of ['dist/index.html','dist/style.css','dist/assets/xeris.png','dist/assets/usdc.png','dist/assets/inter.woff2','dist/assets/jakarta.woff2',...modules]) await access(file);
 for(const file of modules) { const result=spawnSync(process.execPath,['--check',file],{stdio:'inherit'}); if(result.status!==0) process.exit(result.status??1); }
 const html=await readFile('dist/index.html','utf8');

@@ -7,3 +7,5 @@ node_modules/
 *.sqlite*
 *keypair*
 .sites-*
+__pycache__/
+*.pyc

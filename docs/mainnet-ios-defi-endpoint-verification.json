@@ -1,0 +1,2588 @@
+{
+  "observed_utc": "2026-11-24T02:58:47.401213+00:00",
+  "read_only": true,
+  "transaction_submissions": 0,
+  "address_used": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+  "historic_transaction_used": "62dgbuk4ET5JzahP5Er5FeN6HPWTzMtJKwniWxEu7CY8VhNYhvs7MzN67jvqpqYPBFNoYKrL9vJ1mguGsEUoyYks",
+  "checkpoint_expected": {
+    "slot": 27201,
+    "hash": "0a401c139eef73f049010450d4aa13ef38636799784d01bbc0ecdb9c71facaf3"
+  },
+  "checks": [
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 260,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": 29145
+      },
+      "rpc_method": "getSlot",
+      "params": []
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 239,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 2,
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": 29145
+          },
+          "value": {
+            "blockhash": "0bfaa9608160c05c594415a158929bbd76df51723287e5ddc85923ce5c45500b",
+            "lastValidBlockHeight": 29295
+          }
+        }
+      },
+      "rpc_method": "getLatestBlockhash",
+      "params": []
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 321,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 3,
+        "jsonrpc": "2.0",
+        "result": "ok"
+      },
+      "rpc_method": "getHealth",
+      "params": []
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 254,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 4,
+        "jsonrpc": "2.0",
+        "result": {
+          "solana-core": "1.0.0",
+          "xeriscoin": "1.0.0"
+        }
+      },
+      "rpc_method": "getVersion",
+      "params": []
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 308,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 5,
+        "jsonrpc": "2.0",
+        "result": 29146
+      },
+      "rpc_method": "getBlockHeight",
+      "params": []
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 324,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 6,
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": 29147
+          },
+          "value": {
+            "blockhash": "0affce71b645a8884a32e5f35e1e72c440f4fa6c6bf35da15226ac5f74980688",
+            "lastValidBlockHeight": 29297
+          }
+        }
+      },
+      "rpc_method": "getRecentBlockhash",
+      "params": []
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 195,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 7,
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": 29147
+          },
+          "value": 5000000
+        }
+      },
+      "rpc_method": "getBalance",
+      "params": [
+        "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT"
+      ]
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 172,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 8,
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "slot": 29147
+          },
+          "value": {
+            "executable": false,
+            "isValidator": false,
+            "lamports": 5000000,
+            "owner": "system",
+            "stake": 0
+          }
+        }
+      },
+      "rpc_method": "getAccountInfo",
+      "params": [
+        "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT"
+      ]
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 200,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 9,
+        "jsonrpc": "2.0",
+        "result": {
+          "blockHeight": 29145,
+          "blockTime": 1795489098,
+          "blockhash": "0bfaa9608160c05c594415a158929bbd76df51723287e5ddc85923ce5c45500b",
+          "parentSlot": 29144,
+          "transactions": 0
+        }
+      },
+      "rpc_method": "getBlock",
+      "params": [
+        29145
+      ]
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 289,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 10,
+        "jsonrpc": "2.0",
+        "result": null
+      },
+      "rpc_method": "getBlock",
+      "params": [
+        27201
+      ]
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 221,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 11,
+        "jsonrpc": "2.0",
+        "result": {
+          "blockTime": 1795486606,
+          "meta": {
+            "err": null,
+            "fee": 1000000,
+            "instructionOutcomes": [
+              {
+                "index": 0,
+                "ok": true
+              }
+            ]
+          },
+          "slot": 28325,
+          "transaction": {
+            "amount": 497145,
+            "amount_xrs": 0.000497145,
+            "details": {
+              "token_id": "xeris_usdc"
+            },
+            "from": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+            "signatures": [
+              "62dgbuk4ET5JzahP5Er5FeN6HPWTzMtJKwniWxEu7CY8VhNYhvs7MzN67jvqpqYPBFNoYKrL9vJ1mguGsEUoyYks"
+            ],
+            "to": "",
+            "tx_type": "token_burn"
+          }
+        }
+      },
+      "rpc_method": "getTransaction",
+      "params": [
+        "62dgbuk4ET5JzahP5Er5FeN6HPWTzMtJKwniWxEu7CY8VhNYhvs7MzN67jvqpqYPBFNoYKrL9vJ1mguGsEUoyYks"
+      ]
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/",
+      "path": "/",
+      "method": "POST",
+      "status": 200,
+      "elapsed_ms": 195,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "id": 12,
+        "jsonrpc": "2.0",
+        "result": [
+          {
+            "amount": 0,
+            "amount_xrs": 0.0,
+            "blockTime": 1795486606,
+            "err": null,
+            "from": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+            "signature": "62dgbuk4ET5JzahP5Er5FeN6HPWTzMtJKwniWxEu7CY8VhNYhvs7MzN67jvqpqYPBFNoYKrL9vJ1mguGsEUoyYks",
+            "slot": 28325,
+            "to": "",
+            "tx_type": "other",
+            "type": "sent"
+          }
+        ]
+      },
+      "rpc_method": "getSignaturesForAddress",
+      "params": [
+        "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+        {
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/health",
+      "path": "/health",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 178,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "status": "ok"
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/wallet/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT?limit=1",
+      "path": "/wallet/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT?limit=1",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 351,
+      "headers": {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+        "balance": 5000000,
+        "next_after": null,
+        "token_count": 0,
+        "tokens": {},
+        "unit": "XRS"
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/stake/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+      "path": "/stake/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 268,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+        "blocksProposed": 0,
+        "earns_staking_rewards": false,
+        "estimated_annual_reward_xrs": 0.0,
+        "estimated_hourly_reward_lamports": 0,
+        "estimated_hourly_reward_xrs": 0.0,
+        "isValidator": false,
+        "min_stake_for_rewards_xrs": 100,
+        "stake": 0,
+        "stake_xrs": 0.0,
+        "staking_apy_pct": 0.0
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/token/accounts/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+      "path": "/token/accounts/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 256,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+        "native_xrs": 5000000,
+        "token_accounts": []
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/token/balance/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT/xeris_usdc",
+      "path": "/token/balance/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT/xeris_usdc",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 177,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+        "balance": 0,
+        "token_id": "xeris_usdc",
+        "token_info": {
+          "created_slot": 0,
+          "current_supply": 10101886,
+          "decimals": 6,
+          "max_supply": 1000000000000000,
+          "mint_authority": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+          "mint_policy": "Standard",
+          "name": "Xeris USD Coin",
+          "rwa_metadata": null,
+          "symbol": "xUSDC",
+          "token_id": "xeris_usdc"
+        }
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/token/balance/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT/xrs_native",
+      "path": "/token/balance/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT/xrs_native",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 184,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+        "balance": 0,
+        "token_id": "xrs_native",
+        "token_info": {
+          "created_slot": 0,
+          "current_supply": 709700000000,
+          "decimals": 9,
+          "max_supply": 700000000000000000,
+          "mint_authority": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+          "mint_policy": "Standard",
+          "name": "Wrapped XRS",
+          "rwa_metadata": null,
+          "symbol": "wXRS",
+          "token_id": "xrs_native"
+        }
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/tokens?limit=1",
+      "path": "/tokens?limit=1",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 236,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "count": 2,
+        "next_after": "xeris_usdc",
+        "tokens": [
+          {
+            "created_slot": 0,
+            "current_supply": 10101886,
+            "decimals": 6,
+            "max_supply": 1000000000000000,
+            "mint_authority": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+            "mint_policy": "Standard",
+            "name": "Xeris USD Coin",
+            "rwa_metadata": null,
+            "symbol": "xUSDC",
+            "token_id": "xeris_usdc"
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/v2/tokens?limit=1",
+      "path": "/v2/tokens?limit=1",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 651,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "count": 2,
+        "data": [
+          {
+            "created_slot": 0,
+            "current_supply": 10101886,
+            "decimals": 6,
+            "max_supply": 1000000000000000,
+            "mint_authority": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+            "mint_policy": "Standard",
+            "name": "Xeris USD Coin",
+            "rwa_metadata": null,
+            "symbol": "xUSDC",
+            "token_id": "xeris_usdc"
+          }
+        ],
+        "next_after": "xeris_usdc",
+        "success": true
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/v2/pools?limit=1",
+      "path": "/v2/pools?limit=1",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 279,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "count": 1,
+        "next_after": null,
+        "pools": [
+          {
+            "apr": 0.18,
+            "fee_bps": 30,
+            "is_active": true,
+            "lp_holder_count": 2,
+            "pool_id": "xrs-xusdc-mainnet-v1",
+            "price_a_in_b": "0.00001423",
+            "price_b_in_a": "70254.20797661",
+            "reserve_a": 709700000000,
+            "reserve_b": 10101886,
+            "token_a": "xrs_native",
+            "token_b": "xeris_usdc",
+            "total_lp_shares": 2677178048,
+            "total_value_locked": 20.203772,
+            "volume_24h": 0.03321271992860833
+          }
+        ],
+        "success": true
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/contract/xrs-xusdc-mainnet-v1",
+      "path": "/contract/xrs-xusdc-mainnet-v1",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 178,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "contract": {
+          "contract_id": "xrs-xusdc-mainnet-v1",
+          "contract_type": "Swap",
+          "created_slot": 27201,
+          "is_active": true,
+          "owner": "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX",
+          "state": {
+            "Swap": {
+              "fee_bps": 30,
+              "lp_shares": {
+                "BURNED_LIQUIDITY_000000000000000000000": 1000,
+                "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX": 2677177048
+              },
+              "price_observations": [],
+              "reserve_a": 709700000000,
+              "reserve_b": 10101886,
+              "token_a": "xrs_native",
+              "token_b": "xeris_usdc",
+              "total_shares": 2677178048
+            }
+          }
+        },
+        "success": true
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/contract/xrs-xusdc-mainnet-v1/quote?input_token=xeris_usdc&amount=500000",
+      "path": "/contract/xrs-xusdc-mainnet-v1/quote?input_token=xeris_usdc&amount=500000",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 184,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "quote": {
+          "effective_price": 1.498137642489724e-05,
+          "fee": 1500,
+          "fee_bps": 30,
+          "input_amount": 500000,
+          "input_token": "xeris_usdc",
+          "output_amount": 33374770503,
+          "output_token": "xrs_native",
+          "price_impact_pct": "4.72"
+        },
+        "success": true
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/contract/xrs-xusdc-mainnet-v1/quote?input_token=xrs_native&amount=1000000000",
+      "path": "/contract/xrs-xusdc-mainnet-v1/quote?input_token=xrs_native&amount=1000000000",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 894,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "quote": {
+          "effective_price": 70566.65020111496,
+          "fee": 3000000,
+          "fee_bps": 30,
+          "input_amount": 1000000000,
+          "input_token": "xrs_native",
+          "output_amount": 14171,
+          "output_token": "xeris_usdc",
+          "price_impact_pct": "0.14"
+        },
+        "success": true
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/v2/stats",
+      "path": "/v2/stats",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 243,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "block_height": 29151,
+          "current_slot": 29151,
+          "total_transactions": 11,
+          "total_accounts": 5,
+          "total_staked": 3000000000000,
+          "validator_count": 3,
+          "tps_estimate": 0.0
+        }
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/v2/blocks?page=1&page_size=1",
+      "path": "/v2/blocks?page=1&page_size=1",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 187,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "slot": 29151,
+            "hash": "0a3b12ac6b5e469c438112f95ce961966f24e08c869f5c830efb94dab92c977b",
+            "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+            "tx_count": 0,
+            "poh_timestamp": 1795489116820
+          }
+        ],
+        "pagination": {
+          "total": 1000,
+          "page": 1,
+          "page_size": 1,
+          "total_pages": 1000
+        }
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/v2/block/slot/27201",
+      "path": "/v2/block/slot/27201",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 173,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "data": {
+          "hash": "0a401c139eef73f049010450d4aa13ef38636799784d01bbc0ecdb9c71facaf3",
+          "merkle_root": "6aa0efaf55505a9894662adb046b5a31cb06604a190623bcfa636ce9f0249a2b",
+          "nonce": 3567866288962042253,
+          "poh_timestamp": 1795483184538,
+          "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+          "slot": 27201,
+          "transaction_count": 1,
+          "transactions": [
+            {
+              "amount": 0,
+              "amount_xrs": 0.0,
+              "block_slot": 27201,
+              "details": {
+                "contract_id": "xrs-xusdc-mainnet-v1",
+                "contract_type": "swap"
+              },
+              "from": "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX",
+              "signature": "2ouM1ZotTQb9iKk9oS5PUnpNWZPsVGRbUuUDvbrQmwD3LbVb3KxuNonmLqNTgnkqe1J3deDNA1HuTPJY8Lih5uD3",
+              "status": "included",
+              "to": "",
+              "tx_type": "contract_deploy"
+            }
+          ]
+        },
+        "success": true
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/v2/block/hash/0bfaa9608160c05c594415a158929bbd76df51723287e5ddc85923ce5c45500b",
+      "path": "/v2/block/hash/0bfaa9608160c05c594415a158929bbd76df51723287e5ddc85923ce5c45500b",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 195,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "slot": 29145,
+          "hash": "0bfaa9608160c05c594415a158929bbd76df51723287e5ddc85923ce5c45500b",
+          "nonce": 14671644844995424974,
+          "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+          "poh_timestamp": 1795489098574,
+          "merkle_root": "6efd86fdb035a8120d3afc12190ce1ed5aa02b091f494d12d666590cec7f3d70",
+          "transaction_count": 0,
+          "transactions": []
+        }
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/v2/transactions?page=1&page_size=1",
+      "path": "/v2/transactions?page=1&page_size=1",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 330,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": [
+          {
+            "signature": "62dgbuk4ET5JzahP5Er5FeN6HPWTzMtJKwniWxEu7CY8VhNYhvs7MzN67jvqpqYPBFNoYKrL9vJ1mguGsEUoyYks",
+            "block_slot": 28325,
+            "from": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+            "to": "",
+            "amount": 497145,
+            "amount_xrs": 0.000497145,
+            "status": "confirmed",
+            "tx_type": "token_burn",
+            "details": {
+              "token_id": "xeris_usdc"
+            }
+          }
+        ],
+        "pagination": {
+          "total": 5,
+          "page": 1,
+          "page_size": 1,
+          "total_pages": 5
+        }
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/v2/tx/62dgbuk4ET5JzahP5Er5FeN6HPWTzMtJKwniWxEu7CY8VhNYhvs7MzN67jvqpqYPBFNoYKrL9vJ1mguGsEUoyYks",
+      "path": "/v2/tx/62dgbuk4ET5JzahP5Er5FeN6HPWTzMtJKwniWxEu7CY8VhNYhvs7MzN67jvqpqYPBFNoYKrL9vJ1mguGsEUoyYks",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 244,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "data": {
+          "amount": 497145,
+          "amount_xrs": 0.000497145,
+          "block_hash": "0842a7bf3e53495c5e9f3c6dea31c1e0b670031756d0564195e40462952dc275",
+          "block_slot": 28325,
+          "confirmations": 827,
+          "details": {
+            "token_id": "xeris_usdc"
+          },
+          "from": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+          "instructions": [
+            {
+              "index": 0,
+              "status": "confirmed"
+            }
+          ],
+          "poh_timestamp": 1795486606614,
+          "signature": "62dgbuk4ET5JzahP5Er5FeN6HPWTzMtJKwniWxEu7CY8VhNYhvs7MzN67jvqpqYPBFNoYKrL9vJ1mguGsEUoyYks",
+          "status": "confirmed",
+          "to": "",
+          "tx_type": "token_burn"
+        },
+        "success": true
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/v2/account/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+      "path": "/v2/account/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 206,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "success": true,
+        "data": {
+          "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+          "balance": 5000000,
+          "balance_xrs": 0.005,
+          "stake": 0,
+          "is_validator": false,
+          "blocks_proposed": 0
+        }
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/v2/account/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT/transactions?page_size=1",
+      "path": "/v2/account/BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT/transactions?page_size=1",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 265,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "cursor": 11,
+        "data": [
+          {
+            "amount": 0,
+            "amount_xrs": 0.0,
+            "block_slot": 28325,
+            "from": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+            "signature": "62dgbuk4ET5JzahP5Er5FeN6HPWTzMtJKwniWxEu7CY8VhNYhvs7MzN67jvqpqYPBFNoYKrL9vJ1mguGsEUoyYks",
+            "status": "confirmed",
+            "to": "",
+            "tx_type": "sent:other"
+          }
+        ],
+        "pagination": {
+          "page": 1,
+          "page_size": 1,
+          "total": 7,
+          "total_pages": 7
+        },
+        "success": true
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/v2/validators",
+      "path": "/v2/validators",
+      "method": "GET",
+      "status": 200,
+      "elapsed_ms": 192,
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": {
+        "data": [
+          {
+            "address": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+            "blocks_proposed": 9642,
+            "stake": 1000000000000,
+            "stake_percentage": 33.33333333333333
+          },
+          {
+            "address": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+            "blocks_proposed": 9749,
+            "stake": 1000000000000,
+            "stake_percentage": 33.33333333333333
+          },
+          {
+            "address": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+            "blocks_proposed": 9762,
+            "stake": 1000000000000,
+            "stake_percentage": 33.33333333333333
+          }
+        ],
+        "success": true,
+        "total_staked": 3000000000000,
+        "total_staked_xrs": 3000.0,
+        "validator_count": 3
+      }
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/submit",
+      "path": "/submit",
+      "method": "OPTIONS",
+      "status": 204,
+      "elapsed_ms": 277,
+      "headers": {
+        "Content-Type": null,
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": ""
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/contracts",
+      "path": "/contracts",
+      "method": "GET",
+      "status": 404,
+      "elapsed_ms": 240,
+      "headers": {
+        "Content-Type": "text/html",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/launchpads",
+      "path": "/launchpads",
+      "method": "GET",
+      "status": 404,
+      "elapsed_ms": 189,
+      "headers": {
+        "Content-Type": "text/html",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+    },
+    {
+      "url": "https://mainnetrpc.xerisweb.com/price-history?pool_id=xrs-xusdc-mainnet-v1&limit=1",
+      "path": "/price-history?pool_id=xrs-xusdc-mainnet-v1&limit=1",
+      "method": "GET",
+      "status": 404,
+      "elapsed_ms": 172,
+      "headers": {
+        "Content-Type": "text/html",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Retry-After": null,
+        "Cache-Control": "no-store"
+      },
+      "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+    }
+  ],
+  "websites": [
+    {
+      "url": "https://dex.xerisweb.com",
+      "final_url": "https://dex.xerisweb.com",
+      "status": 200,
+      "title": "Xeris DEX",
+      "mainnet_beta_marker": false,
+      "mainnet_rpc_marker": false,
+      "scripts": [
+        "/_next/static/chunks/fb1b0b9da3f03023.js",
+        "/_next/static/chunks/aee6c7720838f8a2.js",
+        "/_next/static/chunks/1c7486ea19d8a1c4.js",
+        "/_next/static/chunks/turbopack-9693170a1b185032.js",
+        "/_next/static/chunks/7784f0b0c33120ae.js",
+        "/_next/static/chunks/c77ecafc0245e12e.js",
+        "/_next/static/chunks/049e68db66ebe713.js",
+        "/_next/static/chunks/0b2450760728f9bb.js",
+        "/_next/static/chunks/ff1a16fafef87110.js",
+        "/_next/static/chunks/a2dfb6fc5208ab9b.js",
+        "/_next/static/chunks/3f06c097259c0210.js",
+        "/_next/static/chunks/7b57c97e4f666e87.js"
+      ],
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "url": "https://launchpad.xerisweb.com",
+      "final_url": "https://launchpad.xerisweb.com",
+      "status": 200,
+      "title": "Xeris Launchpad",
+      "mainnet_beta_marker": false,
+      "mainnet_rpc_marker": false,
+      "scripts": [
+        "/assets/index-8rySgo_R.js"
+      ],
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "url": "https://explorer.xerisweb.com",
+      "final_url": "https://explorer.xerisweb.com",
+      "status": 200,
+      "title": "Xeris Blockchain Explorer",
+      "mainnet_beta_marker": false,
+      "mainnet_rpc_marker": false,
+      "scripts": [
+        "/assets/index-Xu2OLdTT.js"
+      ],
+      "content_type": "text/html; charset=UTF-8"
+    },
+    {
+      "url": "https://lock.xerisweb.com",
+      "final_url": "https://lock.xerisweb.com",
+      "status": 200,
+      "title": "XerisLock \u2014 Token Locker for the Xeris Network",
+      "mainnet_beta_marker": false,
+      "mainnet_rpc_marker": false,
+      "scripts": [
+        "/_next/static/chunks/0pqt~8bl3ukh4.js",
+        "/_next/static/chunks/10u3y4bw1ayzs.js",
+        "/_next/static/chunks/0asfza663l1n9.js",
+        "/_next/static/chunks/turbopack-12rwj3s2h2flj.js",
+        "/_next/static/chunks/11et2eyd7cyn~.js",
+        "/_next/static/chunks/0.8.d7_c4s88c.js",
+        "/_next/static/chunks/0kc89qbh2vj-c.js",
+        "/_next/static/chunks/01xlw8hd842-c.js",
+        "/_next/static/chunks/0n4z.7yu76je-.js",
+        "/_next/static/chunks/0t1sg_4dpqdiz.js",
+        "/_next/static/chunks/0m5_qcg9q6y2n.js",
+        "/_next/static/chunks/03~yq9q893hmn.js"
+      ]
+    }
+  ],
+  "proxy_configuration_verification": {
+    "observed_utc": "2026-11-24T02:59:43.355509+00:00",
+    "deployed_matches_local": true,
+    "mainnet_config_sha256": "5d7334e0785d6d408b19b985b23c68eb86d13f8c36ad1f4192e388b5f0fb95da",
+    "common_snippet_sha256": "b5a7b66c94308f3be8fcfe2cf1526f7ab139d0a4fb0c14b852d589abc714427f"
+  },
+  "optional_solana_reserve_reads": {
+    "observed_utc": "2026-11-24T03:01:07.552988+00:00",
+    "endpoint": "https://api.mainnet-beta.solana.com",
+    "checks": [
+      {
+        "method": "getGenesisHash",
+        "params": [],
+        "status": 200,
+        "body": {
+          "jsonrpc": "2.0",
+          "result": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+          "id": 1
+        }
+      },
+      {
+        "method": "getTokenAccountBalance",
+        "params": [
+          "BeM8R5hvdKGwiV5jKdug3kXoe6RaFaREjihKFNSjeBD6",
+          {
+            "commitment": "finalized"
+          }
+        ],
+        "status": 200,
+        "body": {
+          "jsonrpc": "2.0",
+          "result": {
+            "context": {
+              "apiVersion": "4.4.0",
+              "slot": 473186165
+            },
+            "value": {
+              "amount": "10101886",
+              "decimals": 6,
+              "uiAmount": 10.101886,
+              "uiAmountString": "10.101886"
+            }
+          },
+          "id": 1
+        }
+      }
+    ],
+    "superseded_invalid_address_read": {
+      "method": "getTokenAccountBalance",
+      "params": [
+        "BeM8R5hvdKGwiV5jKdug3kXoe6RaREjihKFNSjeBD6",
+        {
+          "commitment": "finalized"
+        }
+      ],
+      "status": 200,
+      "body": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid param: WrongSize"
+        },
+        "id": 1
+      }
+    }
+  },
+  "market_feed_followup": {
+    "observed_utc": "2026-11-24T03:15:17.479778+00:00",
+    "read_only": true,
+    "transaction_submissions": 0,
+    "checks": [
+      {
+        "url": "https://mainnetrpc.xerisweb.com/market/supply",
+        "method": "GET",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Access-Control-Allow-Origin": [
+            "*"
+          ],
+          "Cache-Control": "no-store"
+        },
+        "body": {
+          "schema_version": "1",
+          "chain_id": "xeris-mainnet-v4",
+          "status": "ready",
+          "observed_at": "2026-11-24T03:15:12.682238+00:00",
+          "observed_at_ms": "1795490112682",
+          "expires_at_ms": "1795490132682",
+          "as_of": {
+            "slot": "29467",
+            "block_hash": "01fe1b8c2027af8cf497e92f132c9fc03af907027889f984317019930c91f4dc",
+            "block_height": "29467"
+          },
+          "supply": {
+            "status": "available",
+            "basis": "liquid_outside_company_v1",
+            "chain_id": "xeris-mainnet-v4",
+            "slot": "29467",
+            "block_hash": "01fe1b8c2027af8cf497e92f132c9fc03af907027889f984317019930c91f4dc",
+            "decimals": 9,
+            "circulating_raw": "709700000000",
+            "total_emitted_raw": "294670767123232",
+            "wrapped_supply_raw": "709700000000",
+            "components_raw": {
+              "native_wallets": "0",
+              "company_native": "200290961067123232",
+              "native_burn_addresses": "0",
+              "native_nonwallet_custody": "0",
+              "wrapped_wallets": "0",
+              "company_wrapped": "0",
+              "wrapped_burn_addresses": "0",
+              "wrapped_nonwallet_custody": "0",
+              "amm_inventory": "709700000000",
+              "inactive_amm_custody": "0",
+              "wrapped_other_custody": "0"
+            },
+            "census": {
+              "native_accounts": 5,
+              "wrapped_holders": 0,
+              "pools": 1,
+              "native_account_limit": 100
+            }
+          },
+          "market": {
+            "token_id": "native_xrs",
+            "symbol": "XRS",
+            "circulating_raw": "709700000000",
+            "decimals": "9",
+            "quote_token_id": "xeris_usdc",
+            "quote_symbol": "xUSDC",
+            "quote_decimals": "6",
+            "market_cap_quote_raw": "10101886",
+            "price_quote_raw_numerator": "10101886",
+            "price_xrs_raw_denominator": "709700000000",
+            "price_pool_id": "xrs-xusdc-mainnet-v1",
+            "valuation_basis": "circulating_supply",
+            "price_basis": "pool_spot"
+          },
+          "mining": {
+            "total_mined_raw": "294670767123232",
+            "total_staked_raw": "3000000000000",
+            "emission_cap_raw": "500000000000000000",
+            "genesis_allocation_raw": "200000000000000000",
+            "current_block_reward_xrs": "10.0",
+            "last_block_timestamp_ms": "1795490108402",
+            "last_block_age_ms": "4280"
+          },
+          "blocks": [
+            {
+              "slot": "29467",
+              "hash": "01fe1b8c2027af8cf497e92f132c9fc03af907027889f984317019930c91f4dc",
+              "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+              "timestamp_ms": "1795490108402",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29466",
+              "hash": "09bf05a3db790c20c8b132c088e25a59983c2a651346ff2a51af740dd2fdab58",
+              "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+              "timestamp_ms": "1795490104550",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29465",
+              "hash": "006fd7f863ea30a60bcd375771d57a94ba0610d8d4ffdee5982d3627787f57b2",
+              "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+              "timestamp_ms": "1795490102459",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29464",
+              "hash": "01decc9f3b068d888365950d8817f75a7186c2216b4e33bc8b5ebe7ca0eeca44",
+              "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+              "timestamp_ms": "1795490100399",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29463",
+              "hash": "0718041fb8078ffd862b8777748d6eba55401c6774d3c9efa3f5adbebecbeb36",
+              "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+              "timestamp_ms": "1795490097792",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29462",
+              "hash": "0fac4e9f5fe40140f00b58569e7b7765db2fdc29158254df97bb1dd7928af729",
+              "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+              "timestamp_ms": "1795490093790",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29461",
+              "hash": "0a27f33a3b00edbb484dbd7b645cbeddcdb3533767d7d8f632b29ad2cb46da02",
+              "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+              "timestamp_ms": "1795490089788",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29460",
+              "hash": "06a246c654de5b86ddba03e391e61dfbaf66cb695058fa9491f40f6584b6d88a",
+              "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+              "timestamp_ms": "1795490085786",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29459",
+              "hash": "00587eaf0e70a4c4db6b59060388fa51af09b9512d8cd15dd7f82c6b50f92ef7",
+              "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+              "timestamp_ms": "1795490081785",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29458",
+              "hash": "057f17c4447ffd4c18a3cbfe5b3d75526841f50addecdfa3298e58f89bcd80d7",
+              "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+              "timestamp_ms": "1795490079692",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29457",
+              "hash": "038858e298bc8fa1c962a29d1d24dfa0762bbdbd322a7805e73d6b473d5104c3",
+              "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+              "timestamp_ms": "1795490077500",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29456",
+              "hash": "0000e34ff6ea4f088b34b5958d6d6672467785385bad5b95ec1a91c5dd6de28a",
+              "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+              "timestamp_ms": "1795490075339",
+              "transaction_count": "0"
+            }
+          ],
+          "policy": {
+            "id": "xeris-mainnet-circulation-v1",
+            "sha256": "9bb121568cfcadff09c90352fe13f1220a6a2c10969993a3405b776f18ea9edb",
+            "excluded_wallets": [
+              {
+                "address": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                "role": "Treasury and undistributed genesis allocation"
+              },
+              {
+                "address": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                "role": "Company producer"
+              },
+              {
+                "address": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                "role": "Company producer"
+              },
+              {
+                "address": "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX",
+                "role": "Company liquidity wallet; active pool inventory is counted separately"
+              },
+              {
+                "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+                "role": "Company operations wallet"
+              },
+              {
+                "address": "BzyrcS63PR4kxt8WAbtCptsbN1czdSsyTt4AaaWJpKTA",
+                "role": "Company funding wallet"
+              },
+              {
+                "address": "2z5hTrp38oFVzpTx3ZhUNYAhkFjtYkexX98xFukpi8Cs",
+                "role": "Company reserve setup wallet"
+              }
+            ],
+            "included_pool_ids": [
+              "xrs-xusdc-mainnet-v1"
+            ],
+            "automatic_pool_rule": "Protocol-managed launch token, reserved canonical graduation pool ID, verified __launchpad_pool__ owner and active token/XRS pair.",
+            "description": "Liquid XRS outside listed company wallets, plus active approved AMM inventory. Undistributed premine, company-held emissions, staking and contract custody are excluded. Wrapped XRS is counted once.",
+            "native_account_limit": "100"
+          },
+          "coverage": {
+            "complete": true,
+            "native_accounts": "5",
+            "wrapped_holders": "0",
+            "pools": "1",
+            "collection_ms": "37"
+          },
+          "launchpad_tokens": []
+        }
+      },
+      {
+        "url": "https://mainnetrpc.xerisweb.com/market/status",
+        "method": "GET",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Access-Control-Allow-Origin": [
+            "*"
+          ],
+          "Cache-Control": "no-store"
+        },
+        "body": {
+          "schema_version": "1",
+          "chain_id": "xeris-mainnet-v4",
+          "status": "ready",
+          "observed_at": "2026-11-24T03:15:12.682238+00:00",
+          "observed_at_ms": "1795490112682",
+          "expires_at_ms": "1795490132682",
+          "as_of": {
+            "slot": "29467",
+            "block_hash": "01fe1b8c2027af8cf497e92f132c9fc03af907027889f984317019930c91f4dc",
+            "block_height": "29467"
+          },
+          "coverage": {
+            "complete": true,
+            "native_accounts": "5",
+            "wrapped_holders": "0",
+            "pools": "1",
+            "collection_ms": "37"
+          }
+        }
+      },
+      {
+        "url": "https://mainnetrpc.xerisweb.com/market/stream",
+        "method": "GET",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Access-Control-Allow-Origin": [
+            "*"
+          ],
+          "Cache-Control": "no-store"
+        },
+        "retry_ms": "5000",
+        "frames": [
+          {
+            "event": "snapshot",
+            "id": "17",
+            "data": {
+              "schema_version": "1",
+              "chain_id": "xeris-mainnet-v4",
+              "status": "ready",
+              "observed_at": "2026-11-24T03:15:12.682238+00:00",
+              "observed_at_ms": "1795490112682",
+              "expires_at_ms": "1795490132682",
+              "as_of": {
+                "slot": "29467",
+                "block_hash": "01fe1b8c2027af8cf497e92f132c9fc03af907027889f984317019930c91f4dc",
+                "block_height": "29467"
+              },
+              "supply": {
+                "status": "available",
+                "basis": "liquid_outside_company_v1",
+                "chain_id": "xeris-mainnet-v4",
+                "slot": "29467",
+                "block_hash": "01fe1b8c2027af8cf497e92f132c9fc03af907027889f984317019930c91f4dc",
+                "decimals": 9,
+                "circulating_raw": "709700000000",
+                "total_emitted_raw": "294670767123232",
+                "wrapped_supply_raw": "709700000000",
+                "components_raw": {
+                  "native_wallets": "0",
+                  "company_native": "200290961067123232",
+                  "native_burn_addresses": "0",
+                  "native_nonwallet_custody": "0",
+                  "wrapped_wallets": "0",
+                  "company_wrapped": "0",
+                  "wrapped_burn_addresses": "0",
+                  "wrapped_nonwallet_custody": "0",
+                  "amm_inventory": "709700000000",
+                  "inactive_amm_custody": "0",
+                  "wrapped_other_custody": "0"
+                },
+                "census": {
+                  "native_accounts": 5,
+                  "wrapped_holders": 0,
+                  "pools": 1,
+                  "native_account_limit": 100
+                }
+              },
+              "market": {
+                "token_id": "native_xrs",
+                "symbol": "XRS",
+                "circulating_raw": "709700000000",
+                "decimals": "9",
+                "quote_token_id": "xeris_usdc",
+                "quote_symbol": "xUSDC",
+                "quote_decimals": "6",
+                "market_cap_quote_raw": "10101886",
+                "price_quote_raw_numerator": "10101886",
+                "price_xrs_raw_denominator": "709700000000",
+                "price_pool_id": "xrs-xusdc-mainnet-v1",
+                "valuation_basis": "circulating_supply",
+                "price_basis": "pool_spot"
+              },
+              "mining": {
+                "total_mined_raw": "294670767123232",
+                "total_staked_raw": "3000000000000",
+                "emission_cap_raw": "500000000000000000",
+                "genesis_allocation_raw": "200000000000000000",
+                "current_block_reward_xrs": "10.0",
+                "last_block_timestamp_ms": "1795490108402",
+                "last_block_age_ms": "4280"
+              },
+              "blocks": [
+                {
+                  "slot": "29467",
+                  "hash": "01fe1b8c2027af8cf497e92f132c9fc03af907027889f984317019930c91f4dc",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490108402",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29466",
+                  "hash": "09bf05a3db790c20c8b132c088e25a59983c2a651346ff2a51af740dd2fdab58",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490104550",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29465",
+                  "hash": "006fd7f863ea30a60bcd375771d57a94ba0610d8d4ffdee5982d3627787f57b2",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490102459",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29464",
+                  "hash": "01decc9f3b068d888365950d8817f75a7186c2216b4e33bc8b5ebe7ca0eeca44",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490100399",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29463",
+                  "hash": "0718041fb8078ffd862b8777748d6eba55401c6774d3c9efa3f5adbebecbeb36",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490097792",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29462",
+                  "hash": "0fac4e9f5fe40140f00b58569e7b7765db2fdc29158254df97bb1dd7928af729",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490093790",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29461",
+                  "hash": "0a27f33a3b00edbb484dbd7b645cbeddcdb3533767d7d8f632b29ad2cb46da02",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490089788",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29460",
+                  "hash": "06a246c654de5b86ddba03e391e61dfbaf66cb695058fa9491f40f6584b6d88a",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490085786",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29459",
+                  "hash": "00587eaf0e70a4c4db6b59060388fa51af09b9512d8cd15dd7f82c6b50f92ef7",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490081785",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29458",
+                  "hash": "057f17c4447ffd4c18a3cbfe5b3d75526841f50addecdfa3298e58f89bcd80d7",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490079692",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29457",
+                  "hash": "038858e298bc8fa1c962a29d1d24dfa0762bbdbd322a7805e73d6b473d5104c3",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490077500",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29456",
+                  "hash": "0000e34ff6ea4f088b34b5958d6d6672467785385bad5b95ec1a91c5dd6de28a",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490075339",
+                  "transaction_count": "0"
+                }
+              ],
+              "policy": {
+                "id": "xeris-mainnet-circulation-v1",
+                "sha256": "9bb121568cfcadff09c90352fe13f1220a6a2c10969993a3405b776f18ea9edb",
+                "excluded_wallets": [
+                  {
+                    "address": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                    "role": "Treasury and undistributed genesis allocation"
+                  },
+                  {
+                    "address": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                    "role": "Company producer"
+                  },
+                  {
+                    "address": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                    "role": "Company producer"
+                  },
+                  {
+                    "address": "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX",
+                    "role": "Company liquidity wallet; active pool inventory is counted separately"
+                  },
+                  {
+                    "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+                    "role": "Company operations wallet"
+                  },
+                  {
+                    "address": "BzyrcS63PR4kxt8WAbtCptsbN1czdSsyTt4AaaWJpKTA",
+                    "role": "Company funding wallet"
+                  },
+                  {
+                    "address": "2z5hTrp38oFVzpTx3ZhUNYAhkFjtYkexX98xFukpi8Cs",
+                    "role": "Company reserve setup wallet"
+                  }
+                ],
+                "included_pool_ids": [
+                  "xrs-xusdc-mainnet-v1"
+                ],
+                "automatic_pool_rule": "Protocol-managed launch token, reserved canonical graduation pool ID, verified __launchpad_pool__ owner and active token/XRS pair.",
+                "description": "Liquid XRS outside listed company wallets, plus active approved AMM inventory. Undistributed premine, company-held emissions, staking and contract custody are excluded. Wrapped XRS is counted once.",
+                "native_account_limit": "100"
+              },
+              "coverage": {
+                "complete": true,
+                "native_accounts": "5",
+                "wrapped_holders": "0",
+                "pools": "1",
+                "collection_ms": "37"
+              },
+              "launchpad_tokens": []
+            }
+          },
+          {
+            "event": "snapshot",
+            "id": "18",
+            "data": {
+              "schema_version": "1",
+              "chain_id": "xeris-mainnet-v4",
+              "status": "ready",
+              "observed_at": "2026-11-24T03:15:17.682772+00:00",
+              "observed_at_ms": "1795490117682",
+              "expires_at_ms": "1795490137682",
+              "as_of": {
+                "slot": "29469",
+                "block_hash": "0366123d2af62c596a0235022f1c264741eca1e5fab7098797bcb30194842bca",
+                "block_height": "29469"
+              },
+              "supply": {
+                "status": "available",
+                "basis": "liquid_outside_company_v1",
+                "chain_id": "xeris-mainnet-v4",
+                "slot": "29469",
+                "block_hash": "0366123d2af62c596a0235022f1c264741eca1e5fab7098797bcb30194842bca",
+                "decimals": 9,
+                "circulating_raw": "709700000000",
+                "total_emitted_raw": "294690767123232",
+                "wrapped_supply_raw": "709700000000",
+                "components_raw": {
+                  "native_wallets": "0",
+                  "company_native": "200290981067123232",
+                  "native_burn_addresses": "0",
+                  "native_nonwallet_custody": "0",
+                  "wrapped_wallets": "0",
+                  "company_wrapped": "0",
+                  "wrapped_burn_addresses": "0",
+                  "wrapped_nonwallet_custody": "0",
+                  "amm_inventory": "709700000000",
+                  "inactive_amm_custody": "0",
+                  "wrapped_other_custody": "0"
+                },
+                "census": {
+                  "native_accounts": 5,
+                  "wrapped_holders": 0,
+                  "pools": 1,
+                  "native_account_limit": 100
+                }
+              },
+              "market": {
+                "token_id": "native_xrs",
+                "symbol": "XRS",
+                "circulating_raw": "709700000000",
+                "decimals": "9",
+                "quote_token_id": "xeris_usdc",
+                "quote_symbol": "xUSDC",
+                "quote_decimals": "6",
+                "market_cap_quote_raw": "10101886",
+                "price_quote_raw_numerator": "10101886",
+                "price_xrs_raw_denominator": "709700000000",
+                "price_pool_id": "xrs-xusdc-mainnet-v1",
+                "valuation_basis": "circulating_supply",
+                "price_basis": "pool_spot"
+              },
+              "mining": {
+                "total_mined_raw": "294690767123232",
+                "total_staked_raw": "3000000000000",
+                "emission_cap_raw": "500000000000000000",
+                "genesis_allocation_raw": "200000000000000000",
+                "current_block_reward_xrs": "10.0",
+                "last_block_timestamp_ms": "1795490116405",
+                "last_block_age_ms": "1277"
+              },
+              "blocks": [
+                {
+                  "slot": "29469",
+                  "hash": "0366123d2af62c596a0235022f1c264741eca1e5fab7098797bcb30194842bca",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490116405",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29468",
+                  "hash": "0b3a1c69387b3968f5317d573b003e57f8b31a4c24f0de00bb00a3112d5836e9",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490112554",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29467",
+                  "hash": "01fe1b8c2027af8cf497e92f132c9fc03af907027889f984317019930c91f4dc",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490108402",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29466",
+                  "hash": "09bf05a3db790c20c8b132c088e25a59983c2a651346ff2a51af740dd2fdab58",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490104550",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29465",
+                  "hash": "006fd7f863ea30a60bcd375771d57a94ba0610d8d4ffdee5982d3627787f57b2",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490102459",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29464",
+                  "hash": "01decc9f3b068d888365950d8817f75a7186c2216b4e33bc8b5ebe7ca0eeca44",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490100399",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29463",
+                  "hash": "0718041fb8078ffd862b8777748d6eba55401c6774d3c9efa3f5adbebecbeb36",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490097792",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29462",
+                  "hash": "0fac4e9f5fe40140f00b58569e7b7765db2fdc29158254df97bb1dd7928af729",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490093790",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29461",
+                  "hash": "0a27f33a3b00edbb484dbd7b645cbeddcdb3533767d7d8f632b29ad2cb46da02",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490089788",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29460",
+                  "hash": "06a246c654de5b86ddba03e391e61dfbaf66cb695058fa9491f40f6584b6d88a",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490085786",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29459",
+                  "hash": "00587eaf0e70a4c4db6b59060388fa51af09b9512d8cd15dd7f82c6b50f92ef7",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490081785",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29458",
+                  "hash": "057f17c4447ffd4c18a3cbfe5b3d75526841f50addecdfa3298e58f89bcd80d7",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490079692",
+                  "transaction_count": "0"
+                }
+              ],
+              "policy": {
+                "id": "xeris-mainnet-circulation-v1",
+                "sha256": "9bb121568cfcadff09c90352fe13f1220a6a2c10969993a3405b776f18ea9edb",
+                "excluded_wallets": [
+                  {
+                    "address": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                    "role": "Treasury and undistributed genesis allocation"
+                  },
+                  {
+                    "address": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                    "role": "Company producer"
+                  },
+                  {
+                    "address": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                    "role": "Company producer"
+                  },
+                  {
+                    "address": "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX",
+                    "role": "Company liquidity wallet; active pool inventory is counted separately"
+                  },
+                  {
+                    "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+                    "role": "Company operations wallet"
+                  },
+                  {
+                    "address": "BzyrcS63PR4kxt8WAbtCptsbN1czdSsyTt4AaaWJpKTA",
+                    "role": "Company funding wallet"
+                  },
+                  {
+                    "address": "2z5hTrp38oFVzpTx3ZhUNYAhkFjtYkexX98xFukpi8Cs",
+                    "role": "Company reserve setup wallet"
+                  }
+                ],
+                "included_pool_ids": [
+                  "xrs-xusdc-mainnet-v1"
+                ],
+                "automatic_pool_rule": "Protocol-managed launch token, reserved canonical graduation pool ID, verified __launchpad_pool__ owner and active token/XRS pair.",
+                "description": "Liquid XRS outside listed company wallets, plus active approved AMM inventory. Undistributed premine, company-held emissions, staking and contract custody are excluded. Wrapped XRS is counted once.",
+                "native_account_limit": "100"
+              },
+              "coverage": {
+                "complete": true,
+                "native_accounts": "5",
+                "wrapped_holders": "0",
+                "pools": "1",
+                "collection_ms": "127"
+              },
+              "launchpad_tokens": []
+            }
+          }
+        ]
+      }
+    ],
+    "earlier_deployment_evidence_file": "mainnet-market-feed-public-verification.json",
+    "proxy_configuration_verification": {
+      "method": "read-only SSH sha256sum of public Nginx configuration files; compared with reviewed local copies",
+      "deployed_hashes_match_local": true,
+      "configuration_changed_since_original_audit": true,
+      "scope": "Additive three market-feed locations and independent limits; L1 node unchanged",
+      "files": [
+        {
+          "remote_path": "/etc/nginx/conf.d/mainnetrpc.xerisweb.com.conf",
+          "local_path": "work/rpc-endpoint/mainnetrpc.xerisweb.com.conf",
+          "sha256": "d2f9c95338f237dd2e21a28ac19533bdf703d9b9455ee8cde5472eb18551ba80"
+        },
+        {
+          "remote_path": "/etc/nginx/snippets/mainnetrpc-proxy-common.conf",
+          "local_path": "work/rpc-endpoint/mainnetrpc-proxy-common.conf",
+          "sha256": "b5a7b66c94308f3be8fcfe2cf1526f7ab139d0a4fb0c14b852d589abc714427f"
+        }
+      ]
+    },
+    "historical_status": "Superseded circulation policy; preserved as historical evidence only. Use market_feed_v2_followup."
+  },
+  "market_feed_v2_followup": {
+    "observed_utc": "2026-11-24T03:25:17.690590+00:00",
+    "read_only": true,
+    "transaction_submissions": 0,
+    "checks": [
+      {
+        "url": "https://mainnetrpc.xerisweb.com/market/supply",
+        "method": "GET",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Access-Control-Allow-Origin": [
+            "*"
+          ],
+          "Cache-Control": "no-store"
+        },
+        "body": {
+          "schema_version": "2",
+          "chain_id": "xeris-mainnet-v4",
+          "status": "ready",
+          "observed_at": "2026-11-24T03:25:07.879039+00:00",
+          "observed_at_ms": "1795490707879",
+          "expires_at_ms": "1795490727879",
+          "as_of": {
+            "slot": "29659",
+            "block_hash": "0a6d44d9951aadf339b3c1528c56bbe84d0fc5f8a39690b956c107d46f4fc83a",
+            "block_height": "29659"
+          },
+          "supply": {
+            "status": "available",
+            "basis": "unlocked_on_chain_v2",
+            "chain_id": "xeris-mainnet-v4",
+            "slot": "29659",
+            "block_hash": "0a6d44d9951aadf339b3c1528c56bbe84d0fc5f8a39690b956c107d46f4fc83a",
+            "decimals": 9,
+            "circulating_raw": "200293590767123232",
+            "total_emitted_raw": "296590767123232",
+            "wrapped_supply_raw": "709700000000",
+            "components_raw": {
+              "native_wallets": "0",
+              "company_native": "200292881067123232",
+              "native_burn_addresses": "0",
+              "native_nonwallet_custody": "0",
+              "wrapped_wallets": "0",
+              "company_wrapped": "0",
+              "wrapped_burn_addresses": "0",
+              "wrapped_nonwallet_custody": "0",
+              "amm_inventory": "709700000000",
+              "inactive_amm_custody": "0",
+              "wrapped_other_custody": "0"
+            },
+            "census": {
+              "native_accounts": 5,
+              "wrapped_holders": 0,
+              "pools": 1,
+              "native_account_limit": 100
+            }
+          },
+          "market": {
+            "token_id": "native_xrs",
+            "symbol": "XRS",
+            "circulating_raw": "200293590767123232",
+            "decimals": "9",
+            "quote_token_id": "xeris_usdc",
+            "quote_symbol": "xUSDC",
+            "quote_decimals": "6",
+            "market_cap_quote_raw": "2850983542990",
+            "price_quote_raw_numerator": "10101886",
+            "price_xrs_raw_denominator": "709700000000",
+            "price_pool_id": "xrs-xusdc-mainnet-v1",
+            "valuation_basis": "circulating_supply",
+            "price_basis": "pool_spot"
+          },
+          "mining": {
+            "total_mined_raw": "296590767123232",
+            "total_staked_raw": "3000000000000",
+            "emission_cap_raw": "500000000000000000",
+            "genesis_allocation_raw": "200000000000000000",
+            "current_block_reward_xrs": "10.0",
+            "last_block_timestamp_ms": "1795490706638",
+            "last_block_age_ms": "1241"
+          },
+          "blocks": [
+            {
+              "slot": "29659",
+              "hash": "0a6d44d9951aadf339b3c1528c56bbe84d0fc5f8a39690b956c107d46f4fc83a",
+              "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+              "timestamp_ms": "1795490706638",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29658",
+              "hash": "01cac5bd5a63cb67aee703aad864d5813a49e79a7d33dfd1970f86f242377577",
+              "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+              "timestamp_ms": "1795490704324",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29657",
+              "hash": "07946258c29a095ed119b11ad877c8e56b81e683da479b94cfcb135fda260c32",
+              "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+              "timestamp_ms": "1795490700321",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29656",
+              "hash": "0c57f8e2a45afa37e90c05d500cb3f2497ec7cd7e771015a945032b5dfafc4d5",
+              "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+              "timestamp_ms": "1795490696226",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29655",
+              "hash": "0e0830af1eadec0ee8727112f7c369e0442a81c0e942343bd4f6289541f20f6b",
+              "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+              "timestamp_ms": "1795490692319",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29654",
+              "hash": "0d3a9eb8161ccd60ed76cad99a1d63e6230bc7689cddde7e689bd9aee76f45ef",
+              "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+              "timestamp_ms": "1795490688317",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29653",
+              "hash": "03ce17a50eb022d7e7b9947185964a68344718141f89da74be21a08aca76fb0b",
+              "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+              "timestamp_ms": "1795490684316",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29652",
+              "hash": "0d68a6f8de32225c658ff08f51360461ce17a8643b8eec1116d1031306a548d4",
+              "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+              "timestamp_ms": "1795490680315",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29651",
+              "hash": "04a3359e54a9419107d7dbac77cae27e5483c3e6e3dbd10e8afc3f0caf82f6d7",
+              "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+              "timestamp_ms": "1795490678262",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29650",
+              "hash": "00e5905ee35cbd509a48991109ef7f07067b70004e8887cefcc242356dcdfeaa",
+              "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+              "timestamp_ms": "1795490676220",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29649",
+              "hash": "0ce0c2710bd14d6887b040bd082c7253ace033e38b407eb6d847c90e65d7474c",
+              "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+              "timestamp_ms": "1795490672219",
+              "transaction_count": "0"
+            },
+            {
+              "slot": "29648",
+              "hash": "06f6ae922185a6634fb1f00dfac790d1b417bcb03ec4099953ea0cc1123da939",
+              "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+              "timestamp_ms": "1795490669984",
+              "transaction_count": "0"
+            }
+          ],
+          "policy": {
+            "id": "xeris-mainnet-circulation-v2",
+            "sha256": "87247ef036948fcfa05be8fb43066fd219318b72cc9872215106c29c65aec13d",
+            "company_wallets": [
+              {
+                "address": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                "role": "Treasury and undistributed genesis allocation"
+              },
+              {
+                "address": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                "role": "Company producer"
+              },
+              {
+                "address": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                "role": "Company producer"
+              },
+              {
+                "address": "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX",
+                "role": "Company liquidity wallet; active pool inventory is counted separately"
+              },
+              {
+                "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+                "role": "Company operations wallet"
+              },
+              {
+                "address": "BzyrcS63PR4kxt8WAbtCptsbN1czdSsyTt4AaaWJpKTA",
+                "role": "Company funding wallet"
+              },
+              {
+                "address": "2z5hTrp38oFVzpTx3ZhUNYAhkFjtYkexX98xFukpi8Cs",
+                "role": "Company reserve setup wallet"
+              }
+            ],
+            "included_pool_ids": [
+              "xrs-xusdc-mainnet-v1"
+            ],
+            "automatic_pool_rule": "Protocol-managed launch token, reserved canonical graduation pool ID, verified __launchpad_pool__ owner and active token/XRS pair.",
+            "description": "All unlocked on-chain XRS, including the genesis allocation and mined rewards held in company or public wallets, plus active approved AMM inventory. Company ownership alone does not exclude supply. Staking, unbonding, burn addresses, locked and other contract custody are excluded. Wrapped XRS is counted once.",
+            "native_account_limit": "100"
+          },
+          "coverage": {
+            "complete": true,
+            "native_accounts": "5",
+            "wrapped_holders": "0",
+            "pools": "1",
+            "collection_ms": "29"
+          },
+          "launchpad_tokens": []
+        }
+      },
+      {
+        "url": "https://mainnetrpc.xerisweb.com/market/status",
+        "method": "GET",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Access-Control-Allow-Origin": [
+            "*"
+          ],
+          "Cache-Control": "no-store"
+        },
+        "body": {
+          "schema_version": "2",
+          "chain_id": "xeris-mainnet-v4",
+          "status": "ready",
+          "observed_at": "2026-11-24T03:25:12.852938+00:00",
+          "observed_at_ms": "1795490712852",
+          "expires_at_ms": "1795490732852",
+          "as_of": {
+            "slot": "29661",
+            "block_hash": "0b45aca9573f43b8dace83cb2991e8110d292ad162053c39a722ff2b253699ff",
+            "block_height": "29661"
+          },
+          "coverage": {
+            "complete": true,
+            "native_accounts": "5",
+            "wrapped_holders": "0",
+            "pools": "1",
+            "collection_ms": "100"
+          }
+        }
+      },
+      {
+        "url": "https://mainnetrpc.xerisweb.com/market/stream",
+        "method": "GET",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Access-Control-Allow-Origin": [
+            "*"
+          ],
+          "Cache-Control": "no-store"
+        },
+        "retry_ms": "5000",
+        "frames": [
+          {
+            "event": "snapshot",
+            "id": "11",
+            "data": {
+              "schema_version": "2",
+              "chain_id": "xeris-mainnet-v4",
+              "status": "ready",
+              "observed_at": "2026-11-24T03:25:12.852938+00:00",
+              "observed_at_ms": "1795490712852",
+              "expires_at_ms": "1795490732852",
+              "as_of": {
+                "slot": "29661",
+                "block_hash": "0b45aca9573f43b8dace83cb2991e8110d292ad162053c39a722ff2b253699ff",
+                "block_height": "29661"
+              },
+              "supply": {
+                "status": "available",
+                "basis": "unlocked_on_chain_v2",
+                "chain_id": "xeris-mainnet-v4",
+                "slot": "29661",
+                "block_hash": "0b45aca9573f43b8dace83cb2991e8110d292ad162053c39a722ff2b253699ff",
+                "decimals": 9,
+                "circulating_raw": "200293610767123232",
+                "total_emitted_raw": "296610767123232",
+                "wrapped_supply_raw": "709700000000",
+                "components_raw": {
+                  "native_wallets": "0",
+                  "company_native": "200292901067123232",
+                  "native_burn_addresses": "0",
+                  "native_nonwallet_custody": "0",
+                  "wrapped_wallets": "0",
+                  "company_wrapped": "0",
+                  "wrapped_burn_addresses": "0",
+                  "wrapped_nonwallet_custody": "0",
+                  "amm_inventory": "709700000000",
+                  "inactive_amm_custody": "0",
+                  "wrapped_other_custody": "0"
+                },
+                "census": {
+                  "native_accounts": 5,
+                  "wrapped_holders": 0,
+                  "pools": 1,
+                  "native_account_limit": 100
+                }
+              },
+              "market": {
+                "token_id": "native_xrs",
+                "symbol": "XRS",
+                "circulating_raw": "200293610767123232",
+                "decimals": "9",
+                "quote_token_id": "xeris_usdc",
+                "quote_symbol": "xUSDC",
+                "quote_decimals": "6",
+                "market_cap_quote_raw": "2850983827670",
+                "price_quote_raw_numerator": "10101886",
+                "price_xrs_raw_denominator": "709700000000",
+                "price_pool_id": "xrs-xusdc-mainnet-v1",
+                "valuation_basis": "circulating_supply",
+                "price_basis": "pool_spot"
+              },
+              "mining": {
+                "total_mined_raw": "296610767123232",
+                "total_staked_raw": "3000000000000",
+                "emission_cap_raw": "500000000000000000",
+                "genesis_allocation_raw": "200000000000000000",
+                "current_block_reward_xrs": "10.0",
+                "last_block_timestamp_ms": "1795490712703",
+                "last_block_age_ms": "149"
+              },
+              "blocks": [
+                {
+                  "slot": "29661",
+                  "hash": "0b45aca9573f43b8dace83cb2991e8110d292ad162053c39a722ff2b253699ff",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490712703",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29660",
+                  "hash": "0f5b223515b56cb565c5e60f0074bed079160187fd5775139256d13628884a50",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490708702",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29659",
+                  "hash": "0a6d44d9951aadf339b3c1528c56bbe84d0fc5f8a39690b956c107d46f4fc83a",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490706638",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29658",
+                  "hash": "01cac5bd5a63cb67aee703aad864d5813a49e79a7d33dfd1970f86f242377577",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490704324",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29657",
+                  "hash": "07946258c29a095ed119b11ad877c8e56b81e683da479b94cfcb135fda260c32",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490700321",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29656",
+                  "hash": "0c57f8e2a45afa37e90c05d500cb3f2497ec7cd7e771015a945032b5dfafc4d5",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490696226",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29655",
+                  "hash": "0e0830af1eadec0ee8727112f7c369e0442a81c0e942343bd4f6289541f20f6b",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490692319",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29654",
+                  "hash": "0d3a9eb8161ccd60ed76cad99a1d63e6230bc7689cddde7e689bd9aee76f45ef",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490688317",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29653",
+                  "hash": "03ce17a50eb022d7e7b9947185964a68344718141f89da74be21a08aca76fb0b",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490684316",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29652",
+                  "hash": "0d68a6f8de32225c658ff08f51360461ce17a8643b8eec1116d1031306a548d4",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490680315",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29651",
+                  "hash": "04a3359e54a9419107d7dbac77cae27e5483c3e6e3dbd10e8afc3f0caf82f6d7",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490678262",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29650",
+                  "hash": "00e5905ee35cbd509a48991109ef7f07067b70004e8887cefcc242356dcdfeaa",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490676220",
+                  "transaction_count": "0"
+                }
+              ],
+              "policy": {
+                "id": "xeris-mainnet-circulation-v2",
+                "sha256": "87247ef036948fcfa05be8fb43066fd219318b72cc9872215106c29c65aec13d",
+                "company_wallets": [
+                  {
+                    "address": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                    "role": "Treasury and undistributed genesis allocation"
+                  },
+                  {
+                    "address": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                    "role": "Company producer"
+                  },
+                  {
+                    "address": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                    "role": "Company producer"
+                  },
+                  {
+                    "address": "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX",
+                    "role": "Company liquidity wallet; active pool inventory is counted separately"
+                  },
+                  {
+                    "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+                    "role": "Company operations wallet"
+                  },
+                  {
+                    "address": "BzyrcS63PR4kxt8WAbtCptsbN1czdSsyTt4AaaWJpKTA",
+                    "role": "Company funding wallet"
+                  },
+                  {
+                    "address": "2z5hTrp38oFVzpTx3ZhUNYAhkFjtYkexX98xFukpi8Cs",
+                    "role": "Company reserve setup wallet"
+                  }
+                ],
+                "included_pool_ids": [
+                  "xrs-xusdc-mainnet-v1"
+                ],
+                "automatic_pool_rule": "Protocol-managed launch token, reserved canonical graduation pool ID, verified __launchpad_pool__ owner and active token/XRS pair.",
+                "description": "All unlocked on-chain XRS, including the genesis allocation and mined rewards held in company or public wallets, plus active approved AMM inventory. Company ownership alone does not exclude supply. Staking, unbonding, burn addresses, locked and other contract custody are excluded. Wrapped XRS is counted once.",
+                "native_account_limit": "100"
+              },
+              "coverage": {
+                "complete": true,
+                "native_accounts": "5",
+                "wrapped_holders": "0",
+                "pools": "1",
+                "collection_ms": "100"
+              },
+              "launchpad_tokens": []
+            }
+          },
+          {
+            "event": "snapshot",
+            "id": "12",
+            "data": {
+              "schema_version": "2",
+              "chain_id": "xeris-mainnet-v4",
+              "status": "ready",
+              "observed_at": "2026-11-24T03:25:17.904737+00:00",
+              "observed_at_ms": "1795490717904",
+              "expires_at_ms": "1795490737904",
+              "as_of": {
+                "slot": "29662",
+                "block_hash": "0c36c7804a729e91805cfa565db491f13baa4cb5b74918ecb0f8b0bbb5697fa4",
+                "block_height": "29662"
+              },
+              "supply": {
+                "status": "available",
+                "basis": "unlocked_on_chain_v2",
+                "chain_id": "xeris-mainnet-v4",
+                "slot": "29662",
+                "block_hash": "0c36c7804a729e91805cfa565db491f13baa4cb5b74918ecb0f8b0bbb5697fa4",
+                "decimals": 9,
+                "circulating_raw": "200293620767123232",
+                "total_emitted_raw": "296620767123232",
+                "wrapped_supply_raw": "709700000000",
+                "components_raw": {
+                  "native_wallets": "0",
+                  "company_native": "200292911067123232",
+                  "native_burn_addresses": "0",
+                  "native_nonwallet_custody": "0",
+                  "wrapped_wallets": "0",
+                  "company_wrapped": "0",
+                  "wrapped_burn_addresses": "0",
+                  "wrapped_nonwallet_custody": "0",
+                  "amm_inventory": "709700000000",
+                  "inactive_amm_custody": "0",
+                  "wrapped_other_custody": "0"
+                },
+                "census": {
+                  "native_accounts": 5,
+                  "wrapped_holders": 0,
+                  "pools": 1,
+                  "native_account_limit": 100
+                }
+              },
+              "market": {
+                "token_id": "native_xrs",
+                "symbol": "XRS",
+                "circulating_raw": "200293620767123232",
+                "decimals": "9",
+                "quote_token_id": "xeris_usdc",
+                "quote_symbol": "xUSDC",
+                "quote_decimals": "6",
+                "market_cap_quote_raw": "2850983970010",
+                "price_quote_raw_numerator": "10101886",
+                "price_xrs_raw_denominator": "709700000000",
+                "price_pool_id": "xrs-xusdc-mainnet-v1",
+                "valuation_basis": "circulating_supply",
+                "price_basis": "pool_spot"
+              },
+              "mining": {
+                "total_mined_raw": "296620767123232",
+                "total_staked_raw": "3000000000000",
+                "emission_cap_raw": "500000000000000000",
+                "genesis_allocation_raw": "200000000000000000",
+                "current_block_reward_xrs": "10.0",
+                "last_block_timestamp_ms": "1795490716704",
+                "last_block_age_ms": "1200"
+              },
+              "blocks": [
+                {
+                  "slot": "29662",
+                  "hash": "0c36c7804a729e91805cfa565db491f13baa4cb5b74918ecb0f8b0bbb5697fa4",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490716704",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29661",
+                  "hash": "0b45aca9573f43b8dace83cb2991e8110d292ad162053c39a722ff2b253699ff",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490712703",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29660",
+                  "hash": "0f5b223515b56cb565c5e60f0074bed079160187fd5775139256d13628884a50",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490708702",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29659",
+                  "hash": "0a6d44d9951aadf339b3c1528c56bbe84d0fc5f8a39690b956c107d46f4fc83a",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490706638",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29658",
+                  "hash": "01cac5bd5a63cb67aee703aad864d5813a49e79a7d33dfd1970f86f242377577",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490704324",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29657",
+                  "hash": "07946258c29a095ed119b11ad877c8e56b81e683da479b94cfcb135fda260c32",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490700321",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29656",
+                  "hash": "0c57f8e2a45afa37e90c05d500cb3f2497ec7cd7e771015a945032b5dfafc4d5",
+                  "proposer": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                  "timestamp_ms": "1795490696226",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29655",
+                  "hash": "0e0830af1eadec0ee8727112f7c369e0442a81c0e942343bd4f6289541f20f6b",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490692319",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29654",
+                  "hash": "0d3a9eb8161ccd60ed76cad99a1d63e6230bc7689cddde7e689bd9aee76f45ef",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490688317",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29653",
+                  "hash": "03ce17a50eb022d7e7b9947185964a68344718141f89da74be21a08aca76fb0b",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490684316",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29652",
+                  "hash": "0d68a6f8de32225c658ff08f51360461ce17a8643b8eec1116d1031306a548d4",
+                  "proposer": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                  "timestamp_ms": "1795490680315",
+                  "transaction_count": "0"
+                },
+                {
+                  "slot": "29651",
+                  "hash": "04a3359e54a9419107d7dbac77cae27e5483c3e6e3dbd10e8afc3f0caf82f6d7",
+                  "proposer": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                  "timestamp_ms": "1795490678262",
+                  "transaction_count": "0"
+                }
+              ],
+              "policy": {
+                "id": "xeris-mainnet-circulation-v2",
+                "sha256": "87247ef036948fcfa05be8fb43066fd219318b72cc9872215106c29c65aec13d",
+                "company_wallets": [
+                  {
+                    "address": "4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL",
+                    "role": "Treasury and undistributed genesis allocation"
+                  },
+                  {
+                    "address": "86TZWQYSiRkccYEAWfU2zbTvwcDouRFFWJ4TLkuYmkB1",
+                    "role": "Company producer"
+                  },
+                  {
+                    "address": "6Y4eJNvkhNoRgxYNEw93TtNvWYHKp3jvomzfVwsby6XH",
+                    "role": "Company producer"
+                  },
+                  {
+                    "address": "HJBaUVbGbRm1JFt6kuC9koxvx2H5NuPsxt4cMuR315iX",
+                    "role": "Company liquidity wallet; active pool inventory is counted separately"
+                  },
+                  {
+                    "address": "BpPwVSjQB6PDmki3bx15REAifJpQRuxWmCwBzpZaQgZT",
+                    "role": "Company operations wallet"
+                  },
+                  {
+                    "address": "BzyrcS63PR4kxt8WAbtCptsbN1czdSsyTt4AaaWJpKTA",
+                    "role": "Company funding wallet"
+                  },
+                  {
+                    "address": "2z5hTrp38oFVzpTx3ZhUNYAhkFjtYkexX98xFukpi8Cs",
+                    "role": "Company reserve setup wallet"
+                  }
+                ],
+                "included_pool_ids": [
+                  "xrs-xusdc-mainnet-v1"
+                ],
+                "automatic_pool_rule": "Protocol-managed launch token, reserved canonical graduation pool ID, verified __launchpad_pool__ owner and active token/XRS pair.",
+                "description": "All unlocked on-chain XRS, including the genesis allocation and mined rewards held in company or public wallets, plus active approved AMM inventory. Company ownership alone does not exclude supply. Staking, unbonding, burn addresses, locked and other contract custody are excluded. Wrapped XRS is counted once.",
+                "native_account_limit": "100"
+              },
+              "coverage": {
+                "complete": true,
+                "native_accounts": "5",
+                "wrapped_holders": "0",
+                "pools": "1",
+                "collection_ms": "61"
+              },
+              "launchpad_tokens": []
+            }
+          }
+        ]
+      }
+    ],
+    "policy_correction": "All unlocked on-chain holdings count, including company wallets. Ownership alone is not an exclusion.",
+    "company_balances_included_verified": true,
+    "snapshot_accounting_check": {
+      "gross_issued_raw": "200296590767123232",
+      "unlocked_circulating_raw": "200293590767123232",
+      "staked_raw": "3000000000000",
+      "gross_minus_unlocked_equals_staked_at_this_snapshot": true,
+      "note": "Timestamped reconciliation, not a universal assertion that stake is the only possible noncirculating custody."
+    },
+    "proxy_configuration_status": "Unchanged by version 2 policy deployment; hashes recorded under market_feed_followup.proxy_configuration_verification."
+  }
+}

@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Xeris mainnet DEX commissioning client",
+  "description": "Xeris mainnet DEX and live network intelligence",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test test-model.mjs test-trade.mjs test-e2e.mjs",
+    "test": "node --test test-model.mjs test-trade.mjs test-e2e.mjs test-markets.mjs test-feed.mjs test-currency.mjs",
     "build": "node build.mjs",
     "dev": "python3 -m http.server 8769 --bind 127.0.0.1 --directory dist"
   }
