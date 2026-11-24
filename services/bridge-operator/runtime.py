@@ -41,6 +41,7 @@ class SettlementRuntime:
         self.authorization_id, self.worker_id = authorization_id, worker_id
         self.clock = clock or journal._now
         self.store, self.lock = RuntimeStore(journal), threading.RLock()
+        self._late_source_cursor = ''
 
     def _intent(self, intent_id):
         status = self.journal.status(intent_id)
@@ -392,6 +393,40 @@ class SettlementRuntime:
                 lease=lease, signed_payload_base64=signed)
             self._submit_original(intent_id, stage, lease)
             return self.journal.status(intent_id)
+
+    def observe_late_sources(self, limit=5, *, can_continue=lambda: True):
+        """Bounded original-ID observation only, including while processing is paused.
+
+        This never calls step(), prepares a transaction, signs or broadcasts.
+        A confirmed late source restores the journal liability for subsequent
+        scoped recovery. Rotate through pending IDs so absent receipts cannot
+        permanently hide later requests. The cursor is only scheduling state.
+        """
+        require(type(limit) is int and 1 <= limit <= 100 and callable(can_continue),
+                'Invalid late-source observation bound')
+        with self.lock:
+            rows = self.journal.db.execute(
+                'SELECT intent_id FROM settlement_source_recovery WHERE resolved=0 '
+                'AND intent_id>? ORDER BY intent_id LIMIT ?',
+                (self._late_source_cursor, limit)).fetchall()
+            if not rows:
+                self._late_source_cursor = ''
+                rows = self.journal.db.execute(
+                    'SELECT intent_id FROM settlement_source_recovery WHERE resolved=0 '
+                    'ORDER BY intent_id LIMIT ?', (limit,)).fetchall()
+            results = []
+            for row in rows:
+                if not can_continue():
+                    break
+                identifier = row[0]
+                try:
+                    status, intent = self._intent(identifier)
+                    result = self._observe_recovery_source(identifier, status, intent)
+                    if result is not None:
+                        results.append(result)
+                finally:
+                    self._late_source_cursor = identifier
+            return results
 
     def recover(self, limit=100):
         """One active route only; caller schedules bounded subsequent steps."""

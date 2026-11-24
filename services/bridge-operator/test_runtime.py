@@ -196,6 +196,36 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(self.broadcaster.calls,[])
         result=self.runtime.step(identifier);self.assertEqual(result['route_mode'],'refund');self.assertEqual(result['obligation']['kind'],'refund_due')
         self.finish(identifier);self.assertEqual(self.broadcaster.calls,['refund'])
+    def test_late_source_batch_observes_while_paused_without_touching_another_route(self):
+        identifier,wire=self.start();self.now+=61;self.runtime.status(identifier)
+        self.runtime.submit_source(identifier,wire)
+        active=self.accepted(client='other-active');self.runtime.prepare_source(active)
+        self.db.pause('Read-only recovery review')
+        with patch.object(self.runtime,'step',side_effect=AssertionError('No execution step')):
+            result=self.runtime.observe_late_sources(limit=1)
+        self.assertEqual(len(result),1)
+        self.assertEqual(result[0]['obligation']['kind'],'refund_due')
+        self.assertTrue(self.runtime.store.recovery_source(identifier)['resolved'])
+        self.assertEqual(self.db.recovery_items()['active_route']['intent_id'],active)
+        self.assertEqual(self.signer.calls,[]);self.assertEqual(self.broadcaster.calls,[])
+    def test_late_source_batch_rotates_pending_receipts_and_honors_stop(self):
+        identifiers=[]
+        for i in range(2):
+            identifier=self.accepted(client='pending-'+str(i));self.runtime.prepare_source(identifier)
+            wire=signed(self.runtime.store.get(identifier,'deposit')['prepared'])
+            self.now+=61;self.runtime.status(identifier);self.runtime.submit_source(identifier,wire)
+            identifiers.append(identifier)
+        self.db.pause('Read-only recovery review');self.observer.pending.add('deposit')
+        with patch.object(self.observer,'observe',wraps=self.observer.observe) as observe:
+            self.assertEqual(self.runtime.observe_late_sources(limit=1,can_continue=lambda:False),[])
+            observe.assert_not_called()
+            for _ in range(3):self.runtime.observe_late_sources(limit=1)
+            observed=[call.args[0]['intent_id'] for call in observe.call_args_list]
+        self.assertEqual(observed,sorted(identifiers)+[min(identifiers)])
+        self.assertTrue(all(not self.runtime.store.recovery_source(v)['resolved'] for v in identifiers))
+        self.assertEqual(self.signer.calls,[]);self.assertEqual(self.broadcaster.calls,[])
+        for invalid in (0,101,True):
+            with self.assertRaises(ValueError):self.runtime.observe_late_sources(limit=invalid)
     def test_late_onchain_deposit_goes_only_to_refund(self):
         identifier,wire=self.start();self.runtime.submit_source(identifier,wire);self.observer.late=True
         result=self.finish(identifier);self.assertEqual(result['status'],'refunded');self.assertEqual(self.broadcaster.calls,['deposit','refund'])

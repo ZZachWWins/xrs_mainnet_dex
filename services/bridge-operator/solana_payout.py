@@ -318,17 +318,30 @@ def verify_receipt(receipt,signature,plan,intent,*,finality):
 
 
 def verify_poststate(accounts_response,plan,intent,receipt_result):
-    """Finalized minContextSlot read order: multisig, proposal, reserve ATA, recipient ATA."""
-    review_plan(plan,intent)
+    """Current custody checks after the immutable finalized payout evidence.
+
+    Read order: multisig, proposal, reserve ATA, recipient ATA. Current token
+    amounts cannot be compared with historical transaction post-balances: the
+    recipient can spend, close or change its account, and anyone can send dust.
+    Exact delivery is established by verify_receipt, not today's recipient state.
+    """
+    reviewed=review_plan(plan,intent)
+    require(type(receipt_result) is dict and receipt_result.get('status')=='FINALIZED_PAYOUT_RECEIPT_VERIFIED'
+            and all(receipt_result.get(key)==reviewed[key] for key in ('intent_id','amount_raw',
+                'destination_owner','destination_token_account','transaction_pda','proposal_pda',
+                'transaction_index','message_sha256')),'Verified receipt does not match payout plan')
     require(type(accounts_response) is dict and uint(accounts_response.get('context',{}).get('slot'))>=receipt_result['slot'],'Poststate predates payout')
     values=accounts_response.get('value');require(type(values) is list and len(values)==4,'Wrong poststate account count')
     multisig,proposal,source,destination=values;config=decode_multisig(multisig)
     require(config['transaction_index']>=plan['transaction_index'],'Multisig index predates payout')
     verify_proposal(proposal,plan)
-    verify_ata(source,VAULT,raw(receipt_result['source_after_raw']))
-    verify_ata(destination,plan['destination_owner'],raw(receipt_result['recipient_after_raw']))
+    reserve_current=verify_ata(source,VAULT)
+    require(destination is None or type(destination) is dict,'Malformed current recipient account')
     return {'status':'PAYOUT_POSTSTATE_VERIFIED','intent_id':intent['intent_id'],'signature':receipt_result['signature'],
-            'proposal_status':'Executed','account_context_slot':accounts_response['context']['slot'],'additional_payout_authorized':False}
+            'proposal_status':'Executed','account_context_slot':accounts_response['context']['slot'],
+            'reserve_current_raw':str(reserve_current),
+            'recipient_current_account':'absent' if destination is None else 'present',
+            'delivery_evidence':'exact_finalized_transaction_receipt','additional_payout_authorized':False}
 
 
 def preflight(plan,intent,read_rpc,max_sol_debit_lamports=10_000_000,*,simulate=True):

@@ -201,12 +201,35 @@ class OperatorLifecycleTests(unittest.TestCase):
             self.runtime.journal.recovery_items = lambda: {'active_route': {'intent_id': 'synthetic-pending'}}
             self.runtime.expire_unfunded = Mock()
             self.runtime.step = Mock()
+            self.runtime.observe_late_sources = Mock()
         self.on_handle = handle
         self.on_collect = lambda: self.handlers[signal.SIGINT]()
         self.run_operator('--enable-processing')
         self.assertEqual(self.events.count('collect'), 1)
         self.runtime.expire_unfunded.assert_not_called()
         self.runtime.step.assert_not_called()
+        self.runtime.observe_late_sources.assert_not_called()
+        self.assert_paused_and_unlocked()
+
+    def test_paused_worker_observes_late_sources_without_an_active_route(self):
+        handles = [0]
+        def handle():
+            handles[0] += 1
+            if handles[0] == 1:
+                self.runtime.observe_late_sources = Mock(return_value=[])
+                self.runtime.step = Mock()
+                self.runtime.recover = Mock()
+            else:
+                self.handlers[signal.SIGTERM]()
+        self.on_handle = handle
+        self.run_operator()
+        self.assertEqual(self.events.count('collect'), 1)
+        self.runtime.observe_late_sources.assert_called_once()
+        arguments = self.runtime.observe_late_sources.call_args.kwargs
+        self.assertEqual(arguments['limit'], 5)
+        self.assertFalse(arguments['can_continue']())
+        self.runtime.step.assert_not_called()
+        self.runtime.recover.assert_not_called()
         self.assert_paused_and_unlocked()
 
     def test_bind_failure_after_resume_still_persists_pause_and_releases_lock(self):

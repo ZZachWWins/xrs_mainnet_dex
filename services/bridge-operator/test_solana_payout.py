@@ -153,12 +153,39 @@ class PayoutTests(unittest.TestCase):
             value=multisig();data=bytearray(base64.b64decode(value['data'][0]));data[index]^=1;value['data'][0]=base64.b64encode(data).decode()
             with self.assertRaises(ValueError):p.decode_multisig(value)
 
-    def test_poststate_requires_executed_proposal_and_correct_finalized_balances(self):
+    def test_poststate_requires_executed_proposal_and_pinned_reserve(self):
         value,intent,result,finality=fixture();verified=p.verify_receipt(result,SIGNATURE,value,intent,finality=finality)
         response={'context':{'slot':1000},'value':[multisig(8),proposal(value),token(p.VAULT,4_500_000),token(OWNER,500_000)]}
         self.assertEqual(p.verify_poststate(response,value,intent,verified)['proposal_status'],'Executed')
         data=bytearray(base64.b64decode(response['value'][1]['data'][0]));data[48]=1;response['value'][1]['data'][0]=base64.b64encode(data).decode()
         with self.assertRaises(ValueError):p.verify_poststate(response,value,intent,verified)
+
+    def test_recipient_activity_does_not_undo_exact_finalized_delivery(self):
+        value,intent,result,finality=fixture();verified=p.verify_receipt(result,SIGNATURE,value,intent,finality=finality)
+        changed=token(OWNER,0)
+        data=bytearray(base64.b64decode(changed['data'][0]))
+        data[32:64]=p.pub(p.FUNDING);data[72:76]=(1).to_bytes(4,'little')
+        changed['data'][0]=base64.b64encode(data).decode()
+        for destination in (token(OWNER,499999),token(OWNER,500001),None,changed):
+            with self.subTest(destination_present=destination is not None):
+                response={'context':{'slot':1001},'value':[multisig(8),proposal(value),token(p.VAULT,4500001),destination]}
+                checked=p.verify_poststate(response,value,intent,verified)
+                self.assertEqual(checked['delivery_evidence'],'exact_finalized_transaction_receipt')
+                self.assertFalse(checked['additional_payout_authorized'])
+        response={'context':{'slot':999},'value':[multisig(8),proposal(value),token(p.VAULT,4500000),None]}
+        with self.assertRaises(ValueError):p.verify_poststate(response,value,intent,verified)
+        response['context']['slot']=1001;response['value'][2]=token(OWNER,4500000)
+        with self.assertRaises(ValueError):p.verify_poststate(response,value,intent,verified)
+        response['value'][2]=token(p.VAULT,4500000)
+        changed_receipt={**verified,'amount_raw':'500001'}
+        with self.assertRaises(ValueError):p.verify_poststate(response,value,intent,changed_receipt)
+
+    def test_mutable_account_tolerance_does_not_relax_historical_delivery_checks(self):
+        for mutate in (lambda m:m['postTokenBalances'][-1].update(owner=p.FUNDING),
+                       lambda m:m['postTokenBalances'][-1].update(mint=p.FUNDING),
+                       lambda m:m['postTokenBalances'][-1]['uiTokenAmount'].update(amount='499999')):
+            value,intent,result,finality=fixture();mutate(result['meta'])
+            with self.assertRaises(ValueError):p.verify_receipt(result,SIGNATURE,value,intent,finality=finality)
 
     def test_simulation_parsed_cpi_allowlist_keeps_exact_units_and_authority(self):
         ix={'programId':p.TOKEN,'stackHeight':2,'parsed':{'type':'transferChecked','info':{

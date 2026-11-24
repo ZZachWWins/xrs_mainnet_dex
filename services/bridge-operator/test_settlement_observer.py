@@ -207,7 +207,11 @@ class ObserverTests(unittest.TestCase):
         result=self.observer.observe(intent,'payout',prepared,pf.SIGNATURE,context)
         self.assertEqual((result['state'],result['amount_raw']),('confirmed','500000'))
         self.chain.reader.responses['getMultipleAccounts']['value'][-1]=pf.token(pf.OWNER,500001)
-        with self.assertRaises(ValueError):self.observer.observe(intent,'payout',prepared,pf.SIGNATURE,context)
+        # Later recipient activity cannot invalidate the already finalized
+        # exact payout receipt or permit a second payment.
+        again=self.observer.observe(intent,'payout',prepared,pf.SIGNATURE,context)
+        self.assertEqual(again['state'],'confirmed')
+        self.assertEqual(again['amount_raw'],intent['amount_raw'])
     def test_submission_recheck_rejects_expired_blockhash_without_broadcast(self):
         args=self.deposit();self.chain.reader.responses['isBlockhashValid']={'value':False}
         with self.assertRaises(ValueError):self.observer.validate_before_submission(args[0],'deposit',args[1],args[2])

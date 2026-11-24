@@ -87,6 +87,11 @@ def main():
             try:
                 chain.collect()
                 if stopping:break
+                # A cancelled request can receive late source evidence after its
+                # active-route lease was released. Reconcile those original IDs
+                # without permitting preparation, signing or broadcasting.
+                runtime.observe_late_sources(limit=5,can_continue=lambda:not stopping)
+                if stopping:break
                 active=journal.recovery_items()['active_route']['intent_id']
                 if active:runtime.expire_unfunded(active)
                 active=journal.recovery_items()['active_route']['intent_id']
