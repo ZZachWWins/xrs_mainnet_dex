@@ -1,10 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseExactJSON} from './dist/model.mjs';
+import {parseExactJSON, MAX_RESPONSE_BYTES} from './dist/model.mjs';
 import {parseMarketSnapshot, formatQuantity, formatMarketCap, formatCompactMarketCap, createMarketFeed} from './dist/feed.mjs';
 const NOW = 1795489537647;
 const ADDRESS = '4p897nUzAxU9xbaQH69fa3S3hvtn9o1STiobHX4vnLoL';
 const HASH = '0d3915c71138518d96fe9e9b77b944fc75ca43306dd347aa96c893d296ac6b05';
+test('oversized stream snapshots are rejected before JSON parsing',()=>{
+  assert.throws(()=>parseMarketSnapshot(' '.repeat(MAX_RESPONSE_BYTES+1)),/unavailable/);
+  assert.throws(()=>parseMarketSnapshot('é'.repeat(MAX_RESPONSE_BYTES/2+1)),/unavailable/);
+});
 function fixture(at = NOW) {
   return {schema_version:'2',chain_id:'xeris-mainnet-v4',status:'ready',observed_at_ms:String(at),expires_at_ms:String(at+20000),
     as_of:{slot:'29284',block_hash:HASH},coverage:{complete:true},

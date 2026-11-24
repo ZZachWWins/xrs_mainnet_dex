@@ -37,6 +37,13 @@ test('ambiguous registry pages and cursor loops fail instead of showing partial 
   await assert.rejects(getLaunchpadTokens({read: async () => ({success: true, data: [], next_after: 'repeat'})}));
 });
 
+test('a registry page cannot exceed the requested bounded page size',async()=>{
+  let reads=0;
+  await assert.rejects(getLaunchpadTokens({read:async () => {reads++;return {success:true,next_after:null,
+    data:Array.from({length:33},(_,i)=>launch(`lp_${i}`))};}}),/unavailable/);
+  assert.equal(reads,1);
+});
+
 test('unsafe or inconsistent launchpad metadata fails validation', () => {
   for (const change of [{current_supply: 9007199254740992}, {current_supply: '9007199254740995'},
     {mint_authority: 'ordinary-wallet'}, {symbol: 'XRS\nFake'}, {decimals: '6'}]) {

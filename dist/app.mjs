@@ -20,6 +20,7 @@ let connectionGeneration = 0, connecting = false, connectingProvider = null;
 const balanceReads = new Map();
 const listeningProviders = new WeakSet();
 let observations = [], currentPool = null, lastObserved = 0, startupPending = true;
+let poolValuationExpiryTimer;
 let balanceStatus = "idle";
 let currencySnapshot = null;
 let solanaState = {status:'disconnected',address:null}, depositRecipientSource = 'manual', depositReview = null;
@@ -27,7 +28,7 @@ const selectedCurrency = () => currencySnapshot?.currency || 'USD';
 const money = (raw, options = {}) => currencySnapshot ? formatQuoteAmount(raw,currencySnapshot,options) : null;
 const ratioMoney = (numerator,denominator,options = {}) => currencySnapshot ? formatQuoteRatio(numerator,denominator,currencySnapshot,options) : null;
 function nativeFiat(raw, options = {}) {
-  if (!currentPool || Date.now() - lastObserved > 45000) return null;
+  if (!currentPool || Date.now() - lastObserved >= 45000) return null;
   return ratioMoney(raw * currentPool.reserveB,currentPool.reserveA,options);
 }
 function activeTradeValuation() {
@@ -136,6 +137,13 @@ function renderChart() {
   const [x,y] = points.at(-1); $('chart-point').setAttribute('cx',x); $('chart-point').setAttribute('cy',y);
   $('chart-caption').textContent = `Session observations · ${selectedCurrency()} equivalents using the current display rate.`;
 }
+function schedulePoolValuationExpiry() {
+  clearTimeout(poolValuationExpiryTimer);
+  const observed = lastObserved;
+  poolValuationExpiryTimer = setTimeout(() => {
+    if (lastObserved === observed) renderValuations();
+  },Math.max(0,observed + 45000 - Date.now()));
+}
 async function refreshPool() {
   if (poolBusy) return;
   poolBusy = true; $('refresh-pool').disabled = true; $('refresh-pool-list').disabled = true;
@@ -146,6 +154,7 @@ async function refreshPool() {
     await checkChain();
     if (startupPending) $('startup-message').textContent = 'Loading the mainnet liquidity pool…';
     const pool = await getPool(); currentPool = pool; lastObserved = Date.now();
+    schedulePoolValuationExpiry();
     const price = formatAmount(pool.reserveB * 100000000000n / pool.reserveA, 8);
     $('reserve-a').textContent = formatAmount(pool.reserveA,9,5); $('reserve-b').textContent = formatAmount(pool.reserveB,6);
     $('list-reserve-a').textContent = formatAmount(pool.reserveA,9); $('list-reserve-b').textContent = formatAmount(pool.reserveB,6);

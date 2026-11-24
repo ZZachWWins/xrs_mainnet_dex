@@ -6,6 +6,7 @@ import {formatQuoteRatio} from './dist/currency.mjs';
 import {
   CONFIG, integer, parseAmount, formatAmount, parseExactJSON, request, rpc,
   checkChain, parsePool, quoteFromPool, quoteValuation, getQuote, parseBalances,
+  MAX_RESPONSE_BYTES,
 } from './dist/model.mjs';
 
 const U64 = (1n << 64n) - 1n;
@@ -176,6 +177,33 @@ test('read timeout produces a bounded actionable error', async () => {
   await assert.rejects(request('/health', {timeout: 5, fetcher: async (_, options) => new Promise((_, reject) => {
     options.signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), {name: 'AbortError'})));
   })}), /timed out/);
+});
+
+test('request deadline covers ignored aborts and stalled body cancellation, then permits recovery', {timeout:1000}, async () => {
+  const never = new Promise(() => {});
+  let lateFetch, lateBodyReads = 0;
+  await assert.rejects(request('/health', {timeout:5, fetcher:() => new Promise(resolve => {lateFetch = resolve;})}), error => error.code === 'TIMEOUT');
+  lateFetch({ok:true,text:async () => {lateBodyReads++; return '{}';}});
+  await new Promise(resolve => setTimeout(resolve,0));
+  assert.equal(lateBodyReads,0,'late transport results are discarded before reading/parsing');
+  let cancellations = 0;
+  const stalled = {ok:true,body:{getReader:() => ({read:() => never,cancel:() => {cancellations++;return never;},releaseLock(){}})}};
+  await assert.rejects(request('/health', {timeout:5,fetcher:async () => stalled}), error => error.code === 'TIMEOUT');
+  assert.equal(cancellations,1,'best-effort body cancellation must not delay the deadline');
+  assert.deepEqual(await request('/health',{fetcher:async () => response({ok:true})}),{ok:true});
+});
+
+test('network response bytes are bounded before parsing despite absent or false length headers', {timeout:1000}, async () => {
+  let reads=0,cancellations=0;
+  await assert.rejects(request('/health',{fetcher:async () => ({ok:true,headers:new Headers({'Content-Length':String(MAX_RESPONSE_BYTES+1)}),
+    body:{cancel:() => {cancellations++;return new Promise(() => {});}},text:async () => {reads++;return '{}';}})}),/supported size/);
+  assert.equal(reads,0);assert.equal(cancellations,1);
+  for(const headers of [{},{'Content-Length':'1'}]) {
+    await assert.rejects(request('/health',{fetcher:async () => new Response('x'.repeat(MAX_RESPONSE_BYTES+1),{headers})}),/supported size/);
+  }
+  await assert.rejects(request('/health',{fetcher:async () => response('"'+'é'.repeat(MAX_RESPONSE_BYTES/2)+'"')}),/supported size/);
+  const exact='{"balance":9007199254740993}';
+  assert.deepEqual(await request('/health',{fetcher:async () => new Response(exact)}),{balance:'9007199254740993'});
 });
 
 test('JSON-RPC rejects result.error rather than treating HTTP 200 as success', async () => {
@@ -365,7 +393,7 @@ test('pool refresh keeps observed reserves visible and ends with named error/ret
   nodes.get('reserve-a').textContent='709.7';nodes.get('reserve-b').textContent='10.099031';
   const pool={reserveA:709700000000n,reserveB:10099031n};
   const context={$:id=>nodes.get(id),poolBusy:false,currentPool:pool,lastObserved:1,startupPending:true,
-    checkChain:async()=>true,getPool:()=>new Promise((_,r)=>{reject=r;}),renderValuations(){},formatAmount,observations:[]};
+    checkChain:async()=>true,getPool:()=>new Promise((_,r)=>{reject=r;}),renderValuations(){},schedulePoolValuationExpiry(){},formatAmount,observations:[]};
   runInNewContext(sourceSpan('function setLoadState(', 'let provider')+sourceSpan('async function refreshPool()', "$('refresh-pool').onclick"),context);
   const pending=context.refreshPool();await new Promise(resolve=>setImmediate(resolve));
   assert.equal(nodes.get('pool-refresh-status').attrs['aria-busy'],'true');
@@ -383,7 +411,7 @@ test('pool refresh keeps observed reserves visible and ends with named error/ret
 test('first successful pool read ends startup and both pool loading indicators without an arbitrary delay', async () => {
   const nodes=loadingDOM();
   const context={$:id=>nodes.get(id),poolBusy:false,currentPool:null,lastObserved:0,startupPending:true,
-    checkChain:async()=>true,getPool:async()=>({reserveA:709700000000n,reserveB:10099031n}),renderValuations(){},formatAmount,observations:[]};
+    checkChain:async()=>true,getPool:async()=>({reserveA:709700000000n,reserveB:10099031n}),renderValuations(){},schedulePoolValuationExpiry(){},formatAmount,observations:[]};
   runInNewContext(sourceSpan('function setLoadState(', 'let provider')+sourceSpan('async function refreshPool()', "$('refresh-pool').onclick"),context);
   await context.refreshPool();
   assert.equal(nodes.get('reserve-a').textContent,'709.7');
@@ -391,6 +419,22 @@ test('first successful pool read ends startup and both pool loading indicators w
     assert.equal(nodes.get(id).attrs['aria-busy'],'false');assert.match(nodes.get(id).textContent,/Pool updated/);
   }
   assert.equal(nodes.get('dex-startup').hidden,true);assert.equal(nodes.get('dex-shell').hidden,false);
+});
+
+test('pool-derived fiat expires at its deadline even while refresh/feed work never completes',()=>{
+  let now=100000,sequence=0;const timers=new Map(),renders=[];
+  const context={currentPool:{reserveA:2n,reserveB:1n},lastObserved:now,poolValuationExpiryTimer:undefined,
+    Date:{now:()=>now},setTimeout(fn,delay){const id=++sequence;timers.set(id,{fn,delay});return id;},clearTimeout(id){timers.delete(id);},
+    ratioMoney:(n,d)=>`${n}/${d}`,renderValuations(){renders.push(context.nativeFiat(100n));}};
+  runInNewContext(sourceSpan('function nativeFiat(', 'function activeTradeValuation()')+
+    sourceSpan('function schedulePoolValuationExpiry()', 'async function refreshPool()'),context);
+  context.schedulePoolValuationExpiry();
+  assert.equal(timers.get(1).delay,45000);assert.equal(context.nativeFiat(100n),'100/2');
+  now+=44999;assert.equal(context.nativeFiat(100n),'100/2');
+  now++;timers.get(1).fn();assert.deepEqual(renders,[null]);
+  assert.notEqual(context.currentPool,null,'observed reserves remain available as historical data');
+  context.lastObserved=now;context.schedulePoolValuationExpiry();
+  assert.equal(timers.has(1),false);assert.equal(context.nativeFiat(100n),'100/2');
 });
 
 test('balance refresh retains existing data while pending and prevents an old wallet result from replacing the next wallet', async () => {

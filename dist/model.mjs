@@ -33,22 +33,74 @@ export function parseExactJSON(text) {
   return JSON.parse(text.replace(/"(?:\\.|[^"\\])*"|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
     (token, number) => number ? JSON.stringify(number) : token));
 }
+export const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+// Native fetch bodies are streamed so a false/missing Content-Length cannot
+// make JSON parsing buffer an unlimited response. Cancellation is best effort;
+// a stalled cancel promise must never hold the caller's deadline open.
+export async function readBoundedText(response, {maximumBytes = MAX_RESPONSE_BYTES, signal} = {}) {
+  if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1 || maximumBytes > MAX_RESPONSE_BYTES) throw new Error('Invalid response limit.');
+  const aborted = () => { if (signal?.aborted) throw Object.assign(new Error('Request cancelled.'), {name:'AbortError'}); };
+  const cancel = target => { try { Promise.resolve(target?.cancel?.()).catch(() => {}); } catch {} };
+  const tooLarge = () => { throw new Error('Network response exceeds the supported size.'); };
+  const length = response.headers?.get?.('Content-Length');
+  if (length != null && (!/^\d+$/.test(length) || length.length > 16 || Number(length) > maximumBytes)) {
+    cancel(response.body); tooLarge();
+  }
+  aborted();
+  if (!response.body?.getReader) {
+    // Non-streaming fetch adapters (including offline fixtures) still receive
+    // the same decoded byte limit before any JSON is parsed.
+    const text = await response.text(); aborted();
+    if (typeof text !== 'string' || text.length > maximumBytes || new TextEncoder().encode(text).byteLength > maximumBytes) tooLarge();
+    return text;
+  }
+  const reader = response.body.getReader(), decoder = new TextDecoder('utf-8', {fatal:true});
+  const stop = () => cancel(reader);
+  signal?.addEventListener('abort', stop, {once:true});
+  let bytes = 0, text = '', complete = false;
+  try {
+    for (;;) {
+      aborted();
+      const chunk = await reader.read(); aborted();
+      if (chunk.done) { complete = true; return text + decoder.decode(); }
+      if (!(chunk.value instanceof Uint8Array)) throw new Error('Invalid network response body.');
+      bytes += chunk.value.byteLength;
+      if (bytes > maximumBytes) tooLarge();
+      text += decoder.decode(chunk.value, {stream:true});
+    }
+  } finally {
+    signal?.removeEventListener('abort', stop);
+    if (!complete) stop();
+    try { reader.releaseLock(); } catch {}
+  }
+}
 export async function request(path, {method = 'GET', body, timeout = 8000, fetcher = fetch} = {}) {
   if (!path.startsWith('/') || path.startsWith('//') || /[?#]/.test(path.split('?')[0])) throw new Error('Invalid RPC path.');
+  if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 30000) throw new Error('Invalid request deadline.');
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
-  try {
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(Object.assign(new Error('Network request timed out. Please refresh.'), {code:'TIMEOUT'}));
+      controller.abort();
+    }, timeout);
+  });
+  const operation = Promise.resolve().then(async () => {
     const response = await fetcher(CONFIG.rpc + path, {
-      method, signal: controller.signal, redirect: 'error', cache: 'no-store',
+      method, signal: controller.signal, redirect: 'error', cache: 'no-store', credentials: 'omit',
       ...(body === undefined ? {} : {headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)}),
     });
+    if (controller.signal.aborted) throw Object.assign(new Error('Request cancelled.'), {name:'AbortError'});
     if (!response.ok) {
       if (response.status === 429) throw new Error('The network is busy. Wait a few seconds, then refresh.');
       throw new Error(`Network request failed (${response.status}).`);
     }
-    const data = parseExactJSON(await response.text());
+    const data = parseExactJSON(await readBoundedText(response, {signal:controller.signal}));
     if (data.error != null || data.success === false) throw new Error('The node could not complete this request.');
     return data;
+  });
+  try {
+    return await Promise.race([operation, deadline]);
   } catch (error) {
     if (error.name === 'AbortError') throw new Error('Network request timed out. Please refresh.');
     throw error;

@@ -1,4 +1,4 @@
-import {parseExactJSON} from './model.mjs';
+import {parseExactJSON, readBoundedText} from './model.mjs';
 
 export const FX_SOURCE_URL = 'https://biquote.io/';
 export const MAX_QUOTE_AGE_MS = 60_000;
@@ -173,8 +173,7 @@ export function createCurrencyController({onChange = () => {}, fetcher = globalT
         if (response.status === 429 || response.status === 503) error.retryAfterMs = retryDelay(response, now());
         throw error;
       }
-      const text = await response.text();
-      if (text.length > 65_536) throw new Error('FX response exceeds the supported size.');
+      const text = await readBoundedText(response, {maximumBytes:65_536, signal:controller.signal});
       return parseFxQuote(parseExactJSON(text)?.[symbol], code, now());
     });
     try {

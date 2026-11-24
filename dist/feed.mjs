@@ -1,4 +1,4 @@
-import {CONFIG, integer, parseExactJSON, request} from './model.mjs';
+import {CONFIG, integer, parseExactJSON, request, MAX_RESPONSE_BYTES} from './model.mjs';
 
 const HASH = /^[0-9a-f]{64}$/, ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const fail = () => { throw new Error('Verified network data is unavailable.'); };
@@ -28,6 +28,7 @@ function components(source, names) {
 }
 
 export function parseMarketSnapshot(input, now = Date.now()) {
+  if (typeof input === 'string' && (input.length > MAX_RESPONSE_BYTES || new TextEncoder().encode(input).byteLength > MAX_RESPONSE_BYTES)) fail();
   const data = typeof input === 'string' ? parseExactJSON(input) : input;
   same(data?.schema_version, '2'); same(data?.chain_id, CONFIG.chainId);
   if (data.status === 'unavailable') return {status:'unavailable', reason:'A complete network census is temporarily unavailable.'};

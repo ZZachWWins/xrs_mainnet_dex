@@ -137,6 +137,17 @@ test('timeout completes even if fetch ignores abort and late success remains dis
   c.stop();
 });
 
+test('FX rejects oversized response bodies before they can become a monetary rate', async () => {
+  for(const headers of [{},{'Content-Length':'1'},{'Content-Length':'65537'}]) {
+    const timer=clock();
+    const c=controller(timer,{fetcher:async () => new Response('x'.repeat(65537),{headers})});
+    await c.start();
+    assert.equal(c.getSnapshot().status,'unavailable');assert.equal(c.getSnapshot().rate,null);
+    assert.equal(formatQuoteAmount('1000000',c.getSnapshot(),{now:timer.now()}),null);
+    c.stop();
+  }
+});
+
 test('foreground refresh retains still-fresh quote only while pending then clears on failure', async () => {
   const timer = clock(), pending = deferred();
   let calls = 0;

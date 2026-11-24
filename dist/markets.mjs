@@ -19,7 +19,7 @@ export async function getLaunchpadTokens({read = request} = {}) {
   let cursor = null;
   for (let page = 0; page < 25; page++) {
     const response = await read(`/v2/tokens?limit=32${cursor === null ? '' : `&after=${encodeURIComponent(cursor)}`}`);
-    if (response?.success !== true || !Array.isArray(response.data) ||
+    if (response?.success !== true || !Array.isArray(response.data) || response.data.length > 32 ||
         !Object.hasOwn(response, 'next_after')) throw new Error('Launchpad listings are unavailable.');
     for (const token of response.data) {
       if (typeof token?.token_id !== 'string' || ids.has(token.token_id)) throw new Error('Ambiguous token registry.');
