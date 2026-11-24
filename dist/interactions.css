@@ -1,0 +1,48 @@
+/* Interaction polish only. Monetary values and background updates stay static. */
+:root{--control-focus:#b6c6ff;--control-edge:#8498bf5c;--interaction-ease:cubic-bezier(.2,.8,.2,1)}
+.nav-wrap nav a,.nav-button{text-transform:none;letter-spacing:.01em;font-weight:550;font-size:.84rem}
+.nav-wrap nav a[aria-current=page]{color:#c4d0ff}
+.trade-column>h1{font-size:clamp(1.8rem,2.8vw,2.45rem);font-weight:600;letter-spacing:-.045em;white-space:normal;margin-bottom:12px}
+.trade-column>.eyebrow{font-size:.68rem;letter-spacing:.1em;line-height:1.6;margin-bottom:0}
+.trade-panel{margin-top:22px}
+.token-box{border-color:#8398c31f}
+.token-box:focus-within{border-color:#a6baff9c;box-shadow:0 0 0 3px #90a7ff14}
+.amount-line input{min-height:44px}
+.segmented button{min-height:44px;font-weight:550}
+.segmented button[aria-pressed=true]{color:#fff}
+.menu-button,.icon-button{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.menu-button{display:none}
+.direction button{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+.text-button{border-radius:2px;text-underline-offset:4px}
+#refresh-quote,#refresh-balances,#refresh-pool,#refresh-pool-list,#reconcile-button{min-height:44px}
+.primary,.outline{border-radius:3px}
+button:disabled{opacity:.58}
+:is(a,button,input,select,textarea):focus-visible{outline:2px solid var(--control-focus);outline-offset:4px}
+.amount-line input:focus-visible{outline:none} /* The surrounding token field receives the focus ring. */
+dialog{border-color:var(--control-edge);border-radius:5px}
+dialog .dialog-top{align-items:center;gap:18px}
+dialog .dialog-top h2{margin-bottom:0}
+.toast{border-radius:4px;line-height:1.65}
+#trade-message[aria-busy=true]{color:#c6d1ed}
+@media(hover:hover) and (pointer:fine){
+  .primary:not(:disabled):hover,.button:not([aria-disabled=true]):hover{border-color:#9cb0fa6b;box-shadow:0 4px 18px #0003}
+  .outline:not(:disabled):hover,.segmented button:not(:disabled):not(.selected):hover{background:#a2b7ff0b;border-color:var(--control-edge)}
+  .icon-button:not(:disabled):hover,.menu-button:not(:disabled):hover,.direction button:not(:disabled):hover{background:#a2b7ff12;color:#e5ecff}
+}
+@media(prefers-reduced-motion:no-preference){
+  .page.view-arriving{animation:dex-view-arrival 180ms var(--interaction-ease) both}
+  .primary,.button,.outline,.icon-button,.menu-button,.segmented button,.direction button,.token-box,.nav-wrap nav a{transition:background-color 140ms ease,border-color 140ms ease,color 140ms ease,box-shadow 140ms ease}
+  button:not(:disabled):active,.button:not([aria-disabled=true]):active{transform:translateY(1px)}
+  @keyframes dex-view-arrival{from{opacity:.55;transform:translateY(6px)}to{opacity:1;transform:none}}
+}
+@media(prefers-reduced-motion:reduce){
+  .page.view-arriving{animation:none;transform:none}
+  .primary,.button,.outline,.icon-button,.menu-button,.segmented button,.direction button,.token-box,.nav-wrap nav a{transition:none}
+}
+@media(max-width:800px){
+  .menu-button{display:inline-flex}
+  .nav-wrap nav{top:100%;gap:6px;padding:12px 16px;box-shadow:0 15px 25px #0004}
+  .nav-wrap nav a,.nav-wrap .nav-button{min-height:44px;display:inline-flex;align-items:center;padding:10px 12px;font-size:.88rem}
+  .nav-wrap nav a.active:after{left:12px;right:12px}
+  .trade-column>h1{font-size:2rem}
+}

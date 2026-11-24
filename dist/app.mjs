@@ -99,23 +99,50 @@ function renderValuations() {
 }
 const say = message => { $('toast').textContent = message; $('toast').classList.remove('hidden'); clearTimeout(say.timer); say.timer = setTimeout(() => $('toast').classList.add('hidden'), 9000); };
 const message = (text, error = false, loading = false) => { setLoadState('trade-message',{text,error,loading}); $('refresh-quote').classList.toggle('hidden',!error || !$('pay-amount').value.trim()); };
-function modal(title, html) { swapReviewQuote = null; delete $('info-dialog').dataset.swapReview; delete $('info-dialog').dataset.solanaPicker; delete $('info-dialog').dataset.depositReview; $('dialog-title').textContent = title; $('dialog-body').innerHTML = html; if (!$('info-dialog').open) $('info-dialog').showModal(); }
+function modal(title, html) { setMenuOpen(false); swapReviewQuote = null; delete $('info-dialog').dataset.swapReview; delete $('info-dialog').dataset.solanaPicker; delete $('info-dialog').dataset.depositReview; $('dialog-title').textContent = title; $('dialog-body').innerHTML = html; if (!$('info-dialog').open) $('info-dialog').showModal(); }
 function closeModal() { swapReviewQuote = null; delete $('info-dialog').dataset.swapReview; delete $('info-dialog').dataset.solanaPicker; delete $('info-dialog').dataset.depositReview; $('info-dialog').close(); }
 $('close-dialog').onclick = closeModal;
 $('info-dialog').addEventListener('click', e => { if (e.target === $('info-dialog')) closeModal(); });
-function route() {
+function setMenuOpen(open, restoreFocus = false) {
+  document.querySelector('nav').classList.toggle('open',open);
+  $('menu-button').setAttribute('aria-expanded',String(open));
+  if (restoreFocus) $('menu-button').focus();
+}
+function route(event) {
   const id = location.hash.slice(1) || location.pathname.replace(/^\/|\/$/g,'') || 'home';
   const allowed = ['home','swap','pools','bridge','network','portfolio','activity'];
   const page = allowed.includes(id) ? id : 'home';
-  document.querySelectorAll('main>.page').forEach(el => el.classList.toggle('hidden', el.id !== page));
-  document.querySelectorAll('nav a').forEach(el => el.classList.toggle('active', el.hash === '#' + page));
-  document.querySelector('nav').classList.remove('open'); $('menu-button').setAttribute('aria-expanded','false');
+  const navigated = event?.type === 'hashchange';
+  document.querySelectorAll('main>.page').forEach(el => {
+    const selected = el.id === page;
+    el.classList.toggle('hidden',!selected);
+    el.classList.toggle('view-arriving',selected && navigated);
+  });
+  document.querySelectorAll('nav a').forEach(el => {
+    const selected = el.hash === '#' + page;
+    el.classList.toggle('active',selected);
+    if (selected) el.setAttribute('aria-current','page'); else el.removeAttribute('aria-current');
+  });
+  setMenuOpen(false);
   if (page === 'portfolio' && address) refreshBalances();
   if (page === 'activity') renderHistory();
   window.scrollTo({top: 0, behavior: 'instant'});
+  if (navigated) {
+    const heading = $(page)?.querySelector('h1');
+    if (heading) { heading.setAttribute('tabindex','-1'); heading.focus({preventScroll:true}); }
+  }
 }
 window.addEventListener('hashchange', route);
-$('menu-button').onclick = () => { const open = document.querySelector('nav').classList.toggle('open'); $('menu-button').setAttribute('aria-expanded', String(open)); };
+$('menu-button').onclick = () => setMenuOpen(!document.querySelector('nav').classList.contains('open'));
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.querySelector('nav').classList.contains('open')) {
+    event.preventDefault(); setMenuOpen(false,true);
+  }
+});
+document.addEventListener('click', event => {
+  const nav = document.querySelector('nav'), button = $('menu-button');
+  if (nav.classList.contains('open') && !nav.contains(event.target) && !button.contains(event.target)) setMenuOpen(false);
+});
 $('more-button').onclick = () => modal('Network services', `<p>Service availability</p><div class="more-grid"><div>Stake<small class="native-badge">Restricted producer roster</small></div><div>Agents<small class="native-badge">Unavailable</small></div><div>Alexandria<small class="native-badge">Unavailable</small></div><div>Governance<small class="native-badge">Unavailable</small></div></div><p class="footnote">Access pool trading, native asset conversion, account balances and transaction records through this interface.</p>`);
 function docs() {
   modal('How mainnet trading works', `<p>Solana USDC backs xUSDC on Xeris. The pool trades xUSDC and wXRS, which converts 1:1 to native XRS.</p><ol class="review-list"><li>USDC deposit and redemption services are currently unavailable.</li><li>With xUSDC and native XRS for fees, approve a pool swap in your Xeris wallet.</li><li>Convert the received wXRS to native XRS in Portfolio. Selling reverses these steps.</li></ol><p>The pool takes 0.3% per swap. Each Xeris transaction costs 0.001 native XRS. Review price impact and the minimum received amount before approving each trade.</p><p class="detail-code">${CONFIG.chainId}<br>${CONFIG.rpc}<br>${CONFIG.poolId}</p><p class="footnote">Your wallet signs locally. The website never requests a seed phrase or private key.</p>`);
@@ -321,6 +348,7 @@ function updateAction() {
   $('trade-button').disabled = busy || connecting || historyError || (!!address && !outstanding && !activeTradeValuation());
   $('trade-button').classList.toggle('loading-inline',busy || connecting);
   $('connect-button').classList.toggle('loading-inline',connecting);
+  $('connect-button').setAttribute('aria-busy',String(connecting));
   $('trade-button').setAttribute('aria-busy',String(busy || connecting));
   ['pay-amount','buy-tab','sell-tab','reverse'].forEach(id => $(id).disabled = busy);
 }
@@ -362,6 +390,7 @@ function setDirection(value) {
   if (busy) return;
   buying = value; quote = null; quoteGeneration++; clearTimeout(quoteTimer);
   $('buy-tab').classList.toggle('selected',buying); $('sell-tab').classList.toggle('selected',!buying);
+  $('buy-tab').setAttribute('aria-pressed',String(buying)); $('sell-tab').setAttribute('aria-pressed',String(!buying));
   $('pay-token').innerHTML = buying ? '<img src="/assets/usdc.png" alt="">xUSDC' : '<img src="/assets/xeris.png" alt="">wXRS';
   $('receive-token').innerHTML = buying ? '<img src="/assets/xeris.png" alt="">wXRS' : '<img src="/assets/usdc.png" alt="">xUSDC';
   $('receive-note').textContent = buying ? 'Convert to native after swap' : 'Redemption is a separate step';
