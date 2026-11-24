@@ -12,7 +12,7 @@ npm run build
 npm run dev
 ```
 
-The local preview is `http://127.0.0.1:8769`. `dist/` contains the maintained HTML, CSS, ES modules and bundled assets; it can be served directly over HTTPS. `netlify.toml` sets the Netlify build command, Node version and publish directory. Import this repository, select `main`, and use `npm run build` with publish directory `dist`. No environment secrets are required. `dist/_redirects` preserves the old page URLs. `vercel.json` is an optional alternative configuration. A persistent MAINNET BETA label appears at the top of every page. Deploy the repository before assigning the `dex.xerisweb.com` custom domain; uploading source alone does not change its existing deployment or DNS.
+The local preview is `http://127.0.0.1:8769`. `dist/` contains the maintained HTML, CSS, ES modules and bundled assets; it can be served directly over HTTPS. `netlify.toml` sets the Netlify build command, Node version and publish directory. Import this repository, select `main`, and use `npm run build` with publish directory `dist`. No environment secrets are required. `dist/_redirects` preserves the old page URLs. `vercel.json` is an optional alternative configuration. The active Mainnet application displays a persistent MAINNET BETA label. The default Testnet homepage is an inactive preview with a prominent Mainnet switch. Deploy the repository before assigning the `dex.xerisweb.com` custom domain; uploading source alone does not change its existing deployment or DNS.
 
 ## Implemented
 
@@ -63,7 +63,7 @@ The interface does not claim that this new client/operator code was covered by t
 
 ## Validation
 
-`npm test` runs 144 offline tests covering exact amounts, lossless JSON, pool identity, quote matching, wallet binding, transaction encoding, signature verification, balances/gas, storage failures, stale quotes, ambiguous submissions and receipt recovery. Codec bytes independently match all four action types from the public completed pilot artifacts. Bridge tests cover provider discovery, connection/account races, invalid addresses, immutable address reviews and provider replacement without invoking any signing or transaction API. Tests use synthetic in-memory keys and mocked network writes. Browser checks use public mainnet reads; they do not spend funds.
+`npm test` runs 167 offline tests in this published release covering exact amounts, lossless JSON, pool identity, quote matching, wallet binding, transaction encoding, signature verification, balances/gas, storage failures, stale quotes, ambiguous submissions and receipt recovery. Codec bytes independently match all four action types from the public completed pilot artifacts. Bridge tests cover provider discovery, connection/account races, invalid addresses, immutable address reviews and provider replacement without invoking any signing or transaction API. Tests use synthetic in-memory keys and mocked network writes. Browser checks use public mainnet reads; they do not spend funds.
 
 Image and font origins are recorded in `asset-manifest.json`. Live chart points are observations from the current browser session, not fabricated historic candles. LP fees remain in pool reserves for LP shareholders; there is no separate 0.777% company cut in this pool.
 
@@ -99,4 +99,11 @@ USD is the default. The header selector also supports EUR, GBP, JPY, CHF, CAD, A
 
 Closed, stale, missing, malformed or 60-second-old quotes are unavailable. A valid in-memory quote may remain visible while the next request is pending, only until its original expiry; request failure clears it. No stale or saved rate is used as fallback. HTTP 429/503 retry delays are respected. The footer identifies the source quote timestamp. Regional closures and weekends can make non-USD estimates unavailable. These are indicative quotes; the free provider offers no SLA. Its [terms](https://biquote.io/terms.html) permit derived product display, but no raw FX relay/API is deployed.
 
-The interface uses restrained text statuses without glowing status dots or outlined badges. MAINNET BETA remains visible on every page.
+The interface uses restrained text statuses without glowing status dots or outlined badges. The selected DEX version remains visible above the product interface.
+
+
+## DEX version switch
+
+**Testnet is the current default**, controlled by the single `DEFAULT_NETWORK` constant in `dist/mode.mjs`. It always opens the homepage, including unqualified legacy `#swap` links. Testnet is a grey, inert presentation-only view with the exact message “Available only on Xeris Mainnet Beta” and an active “Switch to Mainnet Beta” call to action outside the disabled surface. It does not import the active app, contact APIs, discover wallets, or enable transactions.
+
+Explicit `?network=mainnet` loads the existing Mainnet Beta application and retains its safe selected page. The version selector performs full-document navigation; entering Testnet resets to the homepage and clears the fragment so the selector remains visible at the top. Unknown or duplicate `network` parameters show a version choice without loading the app. No Mainnet data is relabeled as Testnet data, no network preference is stored, and no actual Testnet integration is implied. To change the eventual launch default, edit that one constant and retest/build.
