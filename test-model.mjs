@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {runInNewContext} from 'node:vm';
+import {formatQuoteRatio} from './dist/currency.mjs';
 import {
   CONFIG, integer, parseAmount, formatAmount, parseExactJSON, request, rpc,
-  checkChain, parsePool, quoteFromPool, getQuote, parseBalances,
+  checkChain, parsePool, quoteFromPool, quoteValuation, getQuote, parseBalances,
 } from './dist/model.mjs';
 
 const U64 = (1n << 64n) - 1n;
@@ -207,4 +210,207 @@ test('remote quote must exactly agree on direction, input, output and fee', asyn
       else assert.equal((await getQuote(true, 500000n)).outputRaw, 33383761746n);
     });
   }
+});
+
+
+test('sell valuation separates spot market value, executable proceeds and protected minimum', () => {
+  const q = quoteFromPool(parsePool(poolResponse()), false, 1000000000000n);
+  const value = quoteValuation(q, {buying:false, amountText:'1000', now:q.quotedAt});
+  assert.equal(value.marketValue.numerator / value.marketValue.denominator, 14230000n);
+  assert.deepEqual(value.estimatedProceeds, {numerator:5899533n,denominator:1n});
+  assert.deepEqual(value.minimumReceived, {numerator:5870036n,denominator:1n});
+  assert.equal(value.feeRaw, 3000000000n);
+  assert.equal(value.priceImpactPercent, '58.42');
+  assert.equal(value.slippageBps, 50);
+  // Slippage protects the lower bound. It is not deducted a second time from
+  // the actual 5.899533 xUSDC AMM quote, which already includes the LP fee.
+  assert.equal(value.outputRaw, 5899533n);
+  assert.equal(value.minimumOutputRaw, (value.outputRaw * 9950n + 9999n) / 10000n);
+  assert.ok(value.outputRaw > value.minimumOutputRaw);
+});
+
+test('valuation is tied to the quoted reserve snapshot, not a later display pool', () => {
+  const pool = parsePool(poolResponse());
+  const q = quoteFromPool(pool, false, 1000000000n);
+  pool.reserveB *= 2n;
+  const value = quoteValuation(q, {buying:false, amountText:'1', now:q.quotedAt});
+  assert.equal(value.marketValue.numerator, 1000000000n * 10099031n);
+  assert.equal(value.marketValue.denominator, 709700000000n);
+  assert.ok(Object.isFrozen(q) && Object.isFrozen(q.poolSnapshot));
+});
+
+test('mismatched input, direction, pool identity, fee, output and minimum suppress all valuations', () => {
+  const q = quoteFromPool(parsePool(poolResponse()), false, 1000000000000n);
+  const options = {buying:false,amountText:'1000',now:q.quotedAt};
+  for (const changed of [null, {...q,buying:true}, {...q,inputRaw:q.inputRaw+1n},
+    {...q,feeRaw:q.feeRaw+1n}, {...q,outputRaw:q.outputRaw+1n}, {...q,minimumOutputRaw:q.minimumOutputRaw-1n},
+    {...q,slippageBps:100}, {...q,priceImpactPercent:'0.00'}, {...q,poolSnapshot:null},
+    ...[{poolId:'other'},{chainId:'testnet'},{feeBps:77},{reserveA:0n},{reserveB:10099032n}].map(change=>({...q,poolSnapshot:{...q.poolSnapshot,...change}}))]) {
+    assert.equal(quoteValuation(changed,options),null);
+  }
+  assert.equal(quoteValuation(q,{...options,buying:true}),null);
+  for(const amountText of ['1001','invalid','0','1000.0000000001']) assert.equal(quoteValuation(q,{...options,amountText}),null);
+});
+
+test('quote and source observation must both be current and never future dated', () => {
+  const q = quoteFromPool(parsePool(poolResponse()), false, 1000000000n);
+  const options = {buying:false,amountText:'1'};
+  assert.ok(quoteValuation(q,{...options,now:q.quotedAt+29999}));
+  assert.equal(quoteValuation(q,{...options,now:q.quotedAt+30000}),null);
+  assert.equal(quoteValuation(q,{...options,now:q.quotedAt-1}),null);
+  assert.equal(quoteValuation({...q,poolSnapshot:{...q.poolSnapshot,observedAt:q.quotedAt+1}}, {...options,now:q.quotedAt+2}),null);
+  assert.equal(quoteValuation({...q,poolSnapshot:{...q.poolSnapshot,observedAt:q.quotedAt-30000}}, {...options,now:q.quotedAt}),null);
+});
+
+test('buy valuation retains exact input value and output units without applying slippage to proceeds', () => {
+  const q=quoteFromPool(parsePool(poolResponse()),true,500000n);
+  const value=quoteValuation(q,{buying:true,amountText:'0.50',now:q.quotedAt});
+  assert.deepEqual(value.marketValue,{numerator:500000n,denominator:1n});
+  assert.deepEqual(value.estimatedProceeds,{numerator:33383761746n*10099031n,denominator:709700000000n});
+  assert.equal(value.minimumOutputRaw,33216842938n);
+});
+
+test('headline market-value rational preserves amounts above JavaScript safe integer range', () => {
+  const pool={reserveA:9007199254740993n,reserveB:9007199254740991n,at:Date.now()};
+  const q=quoteFromPool(pool,false,9007199254740993n);
+  const value=quoteValuation(q,{buying:false,amountText:'9007199.254740993',now:q.quotedAt});
+  assert.equal(value.marketValue.numerator,9007199254740993n*9007199254740991n);
+  assert.equal(value.marketValue.denominator,9007199254740993n);
+  assert.equal(value.marketValue.numerator/value.marketValue.denominator,9007199254740991n);
+});
+
+
+function valuationDOM(q, amountText, snapshot = {currency:'USD',status:'ready'}) {
+  const html=readFileSync(new URL('./dist/index.html',import.meta.url),'utf8');
+  const nodes=new Map([...html.matchAll(/\bid="([^"]+)"/g)].map(([,id])=>[id,{textContent:'',value:'',dataset:{},
+    classList:{values:new Set(),toggle(name,on){on?this.values.add(name):this.values.delete(name);}}}]));
+  nodes.get('pay-amount').value=amountText;
+  let time=q.quotedAt, currency=snapshot;
+  const context={quote:q,buying:q.buying,swapReviewQuote:null,balances:null,formatAmount,
+    $:id=>nodes.get(id)||null,quoteValuation:(value,options)=>quoteValuation(value,{...options,now:time}),
+    ratioMoney:(n,d,options={})=>formatQuoteRatio(n,d,currency,{...options,now:time})};
+  const app=readFileSync(new URL('./dist/app.mjs',import.meta.url),'utf8');
+  const source=app.slice(app.indexOf('function activeTradeValuation()'),app.indexOf('function renderValuations()'));
+  runInNewContext(source,context);
+  return {nodes,context,render(){context.renderFiatEstimates();},setTime(value){time=value;},setCurrency(value){currency=value;}};
+}
+
+test('actual sell renderer makes spot value the headline and labels smaller pool proceeds/minimum', () => {
+  const q=quoteFromPool(parsePool(poolResponse()),false,1000000000000n);
+  const dom=valuationDOM(q,'1000');dom.render();
+  assert.equal(dom.nodes.get('sell-market-value').textContent,'≈ $14.23');
+  assert.equal(dom.nodes.get('sell-proceeds-fiat').textContent,'≈ $5.90');
+  assert.equal(dom.nodes.get('sell-proceeds-token').textContent,'5.899533 xUSDC');
+  assert.equal(dom.nodes.get('sell-minimum-token').textContent,'5.870036 xUSDC');
+  assert.equal(dom.nodes.get('sell-value-summary').classList.values.has('hidden'),false);
+  assert.equal(dom.nodes.get('receive-box').classList.values.has('hidden'),true);
+  const html=readFileSync(new URL('./dist/index.html',import.meta.url),'utf8');
+  assert.match(html,/>Market value</);assert.match(html,/>Estimated proceeds</);assert.match(html,/>Minimum received</);
+  assert.match(html,/slippage limit, not an additional fee/);
+});
+
+test('actual renderer clears expired/failed/mismatched quote amounts instead of retaining old proceeds', () => {
+  const q=quoteFromPool(parsePool(poolResponse()),false,1000000000000n);
+  for(const invalidate of [dom=>dom.setTime(q.quotedAt+30000),dom=>{dom.context.quote=null;},dom=>{dom.nodes.get('pay-amount').value='1001';}]) {
+    const dom=valuationDOM(q,'1000');dom.render();invalidate(dom);dom.render();
+    assert.equal(dom.nodes.get('sell-market-value').textContent,'Unavailable');
+    assert.equal(dom.nodes.get('sell-proceeds-fiat').textContent,'Unavailable');
+    assert.equal(dom.nodes.get('sell-minimum-fiat').textContent,'Unavailable');
+    assert.equal(dom.nodes.get('sell-proceeds-token').textContent,'— xUSDC');
+    assert.equal(dom.nodes.get('minimum-output').textContent,'—');
+  }
+});
+
+test('FX expiry clears both headline and original review valuation while exact token quote remains', () => {
+  const q=quoteFromPool(parsePool(poolResponse()),false,1000000000000n),now=q.quotedAt;
+  const dom=valuationDOM(q,'1000',{currency:'EUR',status:'ready',asOf:now-59000,expiresAt:now+1000,rate:{numerator:9n,denominator:10n}});
+  dom.nodes.set('review-market-value',{textContent:''});
+  dom.nodes.get('info-dialog').dataset.swapReview='true';dom.context.swapReviewQuote=q;
+  dom.render();assert.equal(dom.nodes.get('sell-market-value').textContent,'≈ €12.81');
+  assert.equal(dom.nodes.get('review-market-value').textContent,'≈ €12.81');
+  dom.setTime(now+1000);dom.render();
+  assert.equal(dom.nodes.get('sell-market-value').textContent,'Unavailable');
+  assert.equal(dom.nodes.get('review-market-value').textContent,'Unavailable');
+  assert.equal(dom.nodes.get('sell-proceeds-token').textContent,'5.899533 xUSDC');
+});
+
+test('buy renderer keeps the original token-output view and hides the sell-only summary', () => {
+  const q=quoteFromPool(parsePool(poolResponse()),true,500000n),dom=valuationDOM(q,'0.5');dom.render();
+  assert.equal(dom.nodes.get('receive-amount').textContent,'33.383761746');
+  assert.equal(dom.nodes.get('minimum-output').textContent,'33.216842938 wXRS');
+  assert.equal(dom.nodes.get('receive-box').classList.values.has('hidden'),false);
+  assert.equal(dom.nodes.get('sell-value-summary').classList.values.has('hidden'),true);
+});
+
+
+test('sub-dollar quote money retains four fractional digits so small differences remain visible', () => {
+  const q=quoteFromPool(parsePool(poolResponse()),false,10000000000n),dom=valuationDOM(q,'10');dom.render();
+  assert.equal(dom.nodes.get('sell-market-value').textContent,'≈ $0.1423');
+  assert.notEqual(dom.nodes.get('sell-market-value').textContent,dom.nodes.get('sell-proceeds-fiat').textContent);
+  assert.notEqual(dom.nodes.get('sell-proceeds-fiat').textContent,dom.nodes.get('sell-minimum-fiat').textContent);
+});
+
+function loadingDOM() {
+  const html=readFileSync(new URL('./dist/index.html',import.meta.url),'utf8');
+  return new Map([...html.matchAll(/\bid="([^"]+)"/g)].map(([,id])=>[id,{textContent:'',hidden:false,disabled:false,
+    attrs:{},setAttribute(name,value){this.attrs[name]=value;},classList:{values:new Set(),toggle(name,on){on?this.values.add(name):this.values.delete(name);}}}]));
+}
+function sourceSpan(start,end) {
+  const app=readFileSync(new URL('./dist/app.mjs',import.meta.url),'utf8');
+  return app.slice(app.indexOf(start),app.indexOf(end,app.indexOf(start)));
+}
+
+test('pool refresh keeps observed reserves visible and ends with named error/retry when the read fails', async () => {
+  const nodes=loadingDOM();let reject;
+  nodes.get('reserve-a').textContent='709.7';nodes.get('reserve-b').textContent='10.099031';
+  const pool={reserveA:709700000000n,reserveB:10099031n};
+  const context={$:id=>nodes.get(id),poolBusy:false,currentPool:pool,lastObserved:1,startupPending:true,
+    checkChain:async()=>true,getPool:()=>new Promise((_,r)=>{reject=r;}),renderValuations(){},formatAmount,observations:[]};
+  runInNewContext(sourceSpan('function setLoadState(', 'let provider')+sourceSpan('async function refreshPool()', "$('refresh-pool').onclick"),context);
+  const pending=context.refreshPool();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(nodes.get('pool-refresh-status').attrs['aria-busy'],'true');
+  assert.equal(nodes.get('reserve-a').textContent,'709.7');
+  assert.equal(nodes.get('reserve-b').textContent,'10.099031');
+  assert.equal(nodes.get('refresh-pool').disabled,true);
+  reject(new Error('Synthetic read failure'));await pending;
+  assert.equal(nodes.get('pool-refresh-status').attrs['aria-busy'],'false');
+  assert.match(nodes.get('pool-refresh-status').textContent,/Last observed pool.*Refresh to retry/);
+  assert.equal(nodes.get('refresh-pool').disabled,false);
+  assert.equal(nodes.get('dex-startup').hidden,true);
+  assert.equal(nodes.get('dex-shell').hidden,false);
+});
+
+test('first successful pool read ends startup and both pool loading indicators without an arbitrary delay', async () => {
+  const nodes=loadingDOM();
+  const context={$:id=>nodes.get(id),poolBusy:false,currentPool:null,lastObserved:0,startupPending:true,
+    checkChain:async()=>true,getPool:async()=>({reserveA:709700000000n,reserveB:10099031n}),renderValuations(){},formatAmount,observations:[]};
+  runInNewContext(sourceSpan('function setLoadState(', 'let provider')+sourceSpan('async function refreshPool()', "$('refresh-pool').onclick"),context);
+  await context.refreshPool();
+  assert.equal(nodes.get('reserve-a').textContent,'709.7');
+  for(const id of ['pool-refresh-status','pool-list-status']) {
+    assert.equal(nodes.get(id).attrs['aria-busy'],'false');assert.match(nodes.get(id).textContent,/Pool updated/);
+  }
+  assert.equal(nodes.get('dex-startup').hidden,true);assert.equal(nodes.get('dex-shell').hidden,false);
+});
+
+test('balance refresh retains existing data while pending and prevents an old wallet result from replacing the next wallet', async () => {
+  let resolve;const events=[],old={nativeRaw:10n};
+  const context={address:'owner-a',connectionGeneration:1,balanceStatus:'ready',balances:old,balanceReads:new Map(),
+    getBalances:()=>new Promise(r=>{resolve=r;}),renderBalances(){events.push({status:context.balanceStatus,value:context.balances});},say(){}};
+  runInNewContext(sourceSpan('async function refreshBalances()', "$('refresh-balances').onclick"),context);
+  const pending=context.refreshBalances();
+  assert.equal(events[0].status,'loading');assert.equal(events[0].value,old);
+  context.address='owner-b';context.connectionGeneration=2;context.balances=null;context.balanceStatus='idle';
+  resolve({nativeRaw:99n});await pending;
+  assert.equal(context.balances,null);assert.equal(context.balanceStatus,'idle');
+});
+
+test('repeated feed start does not erase ready content or launch duplicate streams', () => {
+  const nodes=loadingDOM(),states=[];let starts=0,stops=0;
+  const context={$:id=>nodes.get(id),marketFeed:{start(){starts++;},stop(){stops++;}},renderNetwork:state=>states.push(state.status)};
+  runInNewContext(sourceSpan('let feedRunning = false;', "document.addEventListener('visibilitychange'"),context);
+  context.startNetworkFeed();context.startNetworkFeed();
+  assert.equal(starts,1);assert.deepEqual(states,['loading']);
+  context.stopNetworkFeed();context.startNetworkFeed();
+  assert.equal(stops,1);assert.equal(starts,2);assert.deepEqual(states,['loading','loading']);
 });

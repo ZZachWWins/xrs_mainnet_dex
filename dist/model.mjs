@@ -80,8 +80,17 @@ export function quoteFromPool(pool, buying, amountRaw) {
   integer(reserveIn + inputRaw); // The execution path also must fit u64 reserves.
   const outputRaw = reserveOut * (inputRaw - feeRaw) / (reserveIn + inputRaw - feeRaw);
   integer(outputRaw, true);
-  return {buying, inputRaw, outputRaw, feeRaw, minimumOutputRaw: (outputRaw * 9950n + 9999n) / 10000n,
-    quotedAt: Date.now(), priceImpactPercent: (Number((inputRaw * 20000n + reserveIn + inputRaw) / (2n * (reserveIn + inputRaw))) / 100).toFixed(2)};
+  // Price impact compares executable output with the fee-adjusted spot value.
+  // It is separate from the LP fee and from the user's slippage protection.
+  const spotNumerator = (inputRaw - feeRaw) * reserveOut;
+  const impactHundredths = ((spotNumerator - outputRaw * reserveIn) * 10000n + spotNumerator / 2n) / spotNumerator;
+  const quotedAt = Date.now();
+  const poolSnapshot = Object.freeze({chainId: CONFIG.chainId, poolId: CONFIG.poolId,
+    reserveA: integer(pool.reserveA, true), reserveB: integer(pool.reserveB, true), feeBps: 30,
+    observedAt: pool.at ?? quotedAt});
+  return Object.freeze({buying, inputRaw, outputRaw, feeRaw, minimumOutputRaw: (outputRaw * 9950n + 9999n) / 10000n,
+    quotedAt, poolSnapshot, slippageBps: 50,
+    priceImpactPercent: `${impactHundredths / 100n}.${String(impactHundredths % 100n).padStart(2, '0')}`});
 }
 export async function getQuote(buying, amountRaw) {
   const pool = await getPool();
@@ -94,6 +103,33 @@ export async function getQuote(buying, amountRaw) {
     throw new Error('The pool changed while quoting. Refresh to review the latest price.');
   }
   return expected;
+}
+// Monetary display uses this exact quote's pool snapshot, never a newer or
+// separately fetched pool. Null means no truthful/current valuation is available.
+export function quoteValuation(quote, {buying, amountText, now = Date.now()} = {}) {
+  try {
+    if (typeof buying !== 'boolean' || quote?.buying !== buying || !Number.isSafeInteger(now) ||
+        !Number.isSafeInteger(quote.quotedAt) || quote.quotedAt > now || now - quote.quotedAt >= 30000 ||
+        quote.slippageBps !== 50) return null;
+    const pool = quote.poolSnapshot;
+    if (!pool || pool.chainId !== CONFIG.chainId || pool.poolId !== CONFIG.poolId || pool.feeBps !== 30 ||
+        !Number.isSafeInteger(pool.observedAt) || pool.observedAt > quote.quotedAt || now - pool.observedAt >= 30000) return null;
+    const inputRaw = parseAmount(amountText, buying ? 6 : 9);
+    const reserveA = integer(pool.reserveA, true), reserveB = integer(pool.reserveB, true);
+    const expected = quoteFromPool({reserveA, reserveB}, buying, inputRaw);
+    for (const key of ['inputRaw', 'outputRaw', 'minimumOutputRaw', 'feeRaw']) {
+      if (integer(quote[key]) !== expected[key]) return null;
+    }
+    if (quote.priceImpactPercent !== expected.priceImpactPercent) return null;
+    const ratio = (numerator, denominator = 1n) => Object.freeze({numerator, denominator});
+    const outputValue = raw => buying ? ratio(raw * reserveB, reserveA) : ratio(raw);
+    return Object.freeze({buying, inputRaw, outputRaw: expected.outputRaw,
+      minimumOutputRaw: expected.minimumOutputRaw, feeRaw: expected.feeRaw,
+      marketValue: buying ? ratio(inputRaw) : ratio(inputRaw * reserveB, reserveA),
+      estimatedProceeds: outputValue(expected.outputRaw), minimumReceived: outputValue(expected.minimumOutputRaw),
+      priceImpactPercent: expected.priceImpactPercent, slippageBps: 50,
+      expiresAt: Math.min(quote.quotedAt, pool.observedAt) + 30000});
+  } catch { return null; }
 }
 export function parseBalances(data, address) {
   if (data?.address !== address || !Array.isArray(data.token_accounts)) throw new Error('Wallet balances are unavailable.');

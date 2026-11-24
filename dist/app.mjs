@@ -1,16 +1,26 @@
-import {CONFIG, getPool, getQuote, getBalances, checkChain, parseAmount, formatAmount} from './model.mjs';
+import {CONFIG, getPool, getQuote, getBalances, checkChain, parseAmount, formatAmount, quoteValuation} from './model.mjs';
 import {execute, reconcile, getHistory, getPending} from './trade.mjs';
 import {getLaunchpadTokens, mergeLaunchpadMarkets} from './markets.mjs';
 import {createMarketFeed, formatQuantity} from './feed.mjs';
 import {validateRecipient, createSolanaConnection} from './bridge.mjs';
 import {CURRENCIES, FX_SOURCE_URL, createCurrencyController, formatQuoteAmount, formatQuoteRatio} from './currency.mjs';
 const $ = id => document.getElementById(id);
+function setLoadState(id, {text, loading = false, error = false}) {
+  const node = $(id); if (!node) return;
+  node.textContent = text; node.setAttribute('role','status'); node.setAttribute('aria-busy',String(loading));
+  node.classList.toggle('loading-inline',loading); node.classList.toggle('error',error);
+}
+function finishStartup() {
+  startupPending = false; $('dex-startup').hidden = true; $('dex-shell').hidden = false;
+}
 let provider = null, address = null, balances = null, buying = true, quote = null;
-let quoteTimer, quoteGeneration = 0, busy = false, poolBusy = false, reconcileBusy = false, historyError = false;
+let swapReviewQuote = null;
+let quoteTimer, quoteExpiryTimer, quoteGeneration = 0, busy = false, poolBusy = false, reconcileBusy = false, historyError = false;
 let connectionGeneration = 0, connecting = false, connectingProvider = null;
 const balanceReads = new Map();
 const listeningProviders = new WeakSet();
-let observations = [], currentPool = null, lastObserved = 0;
+let observations = [], currentPool = null, lastObserved = 0, startupPending = true;
+let balanceStatus = "idle";
 let currencySnapshot = null;
 let solanaState = {status:'disconnected',address:null}, depositRecipientSource = 'manual', depositReview = null;
 const selectedCurrency = () => currencySnapshot?.currency || 'USD';
@@ -20,13 +30,41 @@ function nativeFiat(raw, options = {}) {
   if (!currentPool || Date.now() - lastObserved > 45000) return null;
   return ratioMoney(raw * currentPool.reserveB,currentPool.reserveA,options);
 }
+function activeTradeValuation() {
+  return quoteValuation(quote, {buying, amountText:$('pay-amount').value});
+}
+function valuationMoney(ratio) {
+  if (!ratio) return null;
+  const options = ratio.numerator < ratio.denominator * 1000000n ? {maximumFractionDigits:4} : {};
+  return ratioMoney(ratio.numerator,ratio.denominator,options);
+}
 function renderFiatEstimates() {
-  const activeQuote = quote && Date.now() - quote.quotedAt <= 30000 ? quote : null;
-  const pay = activeQuote ? (activeQuote.buying ? money(activeQuote.inputRaw) : nativeFiat(activeQuote.inputRaw)) : null;
-  const receive = activeQuote ? (activeQuote.buying ? nativeFiat(activeQuote.outputRaw) : money(activeQuote.outputRaw)) : null;
+  const value = activeTradeValuation();
+  const pay = valuationMoney(value?.marketValue), receive = valuationMoney(value?.estimatedProceeds);
   $('pay-fiat').textContent = pay ? `≈ ${pay}` : '—'; $('receive-fiat').textContent = receive ? `≈ ${receive}` : '—';
-  for (const [id,value] of [['native-fiat',balances ? nativeFiat(balances.nativeRaw) : null],['wrapped-fiat',balances ? nativeFiat(balances.wrappedRaw) : null],['usdc-fiat',balances ? money(balances.usdcRaw) : null]]) {
-    $(id).textContent = value ? `≈ ${value}` : '—';
+  $('pay-fiat').classList.toggle('hidden', !buying);
+  $('receive-box').classList.toggle('hidden', !buying);
+  $('minimum-output-row').classList.toggle('hidden', !buying);
+  $('sell-value-summary').classList.toggle('hidden', buying);
+  $('sell-market-value').textContent = pay ? `≈ ${pay}` : 'Unavailable';
+  $('sell-proceeds-fiat').textContent = receive ? `≈ ${receive}` : 'Unavailable';
+  const reviewValue = swapReviewQuote && quoteValuation(swapReviewQuote, {buying:swapReviewQuote.buying,
+    amountText:formatAmount(swapReviewQuote.inputRaw,swapReviewQuote.buying?6:9)});
+  if ($('review-market-value') && $('info-dialog').dataset.swapReview === 'true') {
+    const reviewedMarket = valuationMoney(reviewValue?.marketValue);
+    $('review-market-value').textContent = reviewedMarket ? `≈ ${reviewedMarket}` : 'Unavailable';
+  }
+  const minimum = valuationMoney(value?.minimumReceived);
+  $('sell-minimum-fiat').textContent = minimum ? `≈ ${minimum}` : 'Unavailable';
+  $('sell-proceeds-token').textContent = value && !buying ? `${formatAmount(value.outputRaw,6)} xUSDC` : '— xUSDC';
+  $('sell-minimum-token').textContent = value && !buying ? `${formatAmount(value.minimumOutputRaw,6)} xUSDC` : '— xUSDC';
+  const decimals = buying ? 9 : 6, token = buying ? 'wXRS' : 'xUSDC';
+  $('receive-amount').textContent = value ? formatAmount(value.outputRaw,decimals) : '—';
+  $('minimum-output').textContent = value ? `${formatAmount(value.minimumOutputRaw,decimals)} ${token}` : '—';
+  $('price-impact').textContent = value ? value.priceImpactPercent + '%' : '—';
+  $('trade-fee').textContent = value ? `${formatAmount(value.feeRaw,buying?6:9)} ${buying?'xUSDC':'wXRS'}` : '0.3%';
+  for (const [id,amount] of [['native-fiat',balances ? nativeFiat(balances.nativeRaw) : null],['wrapped-fiat',balances ? nativeFiat(balances.wrappedRaw) : null],['usdc-fiat',balances ? money(balances.usdcRaw) : null]]) {
+    $(id).textContent = amount ? `≈ ${amount}` : '—';
   }
 }
 function renderValuations() {
@@ -53,12 +91,15 @@ function renderValuations() {
     const timestamp = new Date(currencySnapshot.asOf).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
     $('fx-status').textContent = `${currency} / USD FX quote · ${timestamp} · xUSDC 1:1 USD reference`;
   } else $('fx-status').textContent = `${currency} FX ${currencySnapshot?.status === 'loading' ? 'updating' : 'unavailable'} · token quotes remain in their native units`;
+  $('fx-status').classList.toggle('loading-inline',currencySnapshot?.status === 'loading' || currencySnapshot?.refreshing === true);
+  $('fx-status').setAttribute('role','status');
+  $('fx-status').setAttribute('aria-busy',String(currencySnapshot?.status === 'loading' || currencySnapshot?.refreshing === true));
   renderMarkets(); renderChart(); renderFiatEstimates();
 }
 const say = message => { $('toast').textContent = message; $('toast').classList.remove('hidden'); clearTimeout(say.timer); say.timer = setTimeout(() => $('toast').classList.add('hidden'), 9000); };
-const message = (text, error = false) => { $('trade-message').textContent = text; $('trade-message').classList.toggle('error', error); };
-function modal(title, html) { delete $('info-dialog').dataset.solanaPicker; delete $('info-dialog').dataset.depositReview; $('dialog-title').textContent = title; $('dialog-body').innerHTML = html; if (!$('info-dialog').open) $('info-dialog').showModal(); }
-function closeModal() { delete $('info-dialog').dataset.solanaPicker; delete $('info-dialog').dataset.depositReview; $('info-dialog').close(); }
+const message = (text, error = false, loading = false) => { setLoadState('trade-message',{text,error,loading}); $('refresh-quote').classList.toggle('hidden',!error || !$('pay-amount').value.trim()); };
+function modal(title, html) { swapReviewQuote = null; delete $('info-dialog').dataset.swapReview; delete $('info-dialog').dataset.solanaPicker; delete $('info-dialog').dataset.depositReview; $('dialog-title').textContent = title; $('dialog-body').innerHTML = html; if (!$('info-dialog').open) $('info-dialog').showModal(); }
+function closeModal() { swapReviewQuote = null; delete $('info-dialog').dataset.swapReview; delete $('info-dialog').dataset.solanaPicker; delete $('info-dialog').dataset.depositReview; $('info-dialog').close(); }
 $('close-dialog').onclick = closeModal;
 $('info-dialog').addEventListener('click', e => { if (e.target === $('info-dialog')) closeModal(); });
 function route() {
@@ -97,23 +138,29 @@ function renderChart() {
 }
 async function refreshPool() {
   if (poolBusy) return;
-  poolBusy = true; $('refresh-pool').disabled = true;
+  poolBusy = true; $('refresh-pool').disabled = true; $('refresh-pool-list').disabled = true;
+  const loadingText = currentPool ? 'Refreshing mainnet pool…' : 'Loading mainnet pool…';
+  for (const id of ['pool-refresh-status','pool-list-status']) setLoadState(id,{text:loadingText,loading:true});
   try {
+    if (startupPending) $('startup-message').textContent = 'Verifying Xeris mainnet…';
     await checkChain();
+    if (startupPending) $('startup-message').textContent = 'Loading the mainnet liquidity pool…';
     const pool = await getPool(); currentPool = pool; lastObserved = Date.now();
     const price = formatAmount(pool.reserveB * 100000000000n / pool.reserveA, 8);
     $('reserve-a').textContent = formatAmount(pool.reserveA,9,5); $('reserve-b').textContent = formatAmount(pool.reserveB,6);
     $('list-reserve-a').textContent = formatAmount(pool.reserveA,9); $('list-reserve-b').textContent = formatAmount(pool.reserveB,6);
     $('connection-status').textContent = 'Mainnet connected';
     const time = new Date(lastObserved).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    $('observed-time').textContent = time; $('pool-refresh-status').textContent = `Updated ${time}`;
+    $('observed-time').textContent = time;
+    for (const id of ['pool-refresh-status','pool-list-status']) setLoadState(id,{text:`Pool updated ${time}`});
     observations.push({time:lastObserved,price:Number(price)}); if (observations.length > 90) observations.shift(); renderValuations();
   } catch (error) {
     $('connection-status').textContent = 'Mainnet unavailable';
-    $('pool-refresh-status').textContent = currentPool ? 'Last known pool values · refresh unavailable' : error.message;
-  } finally { poolBusy = false; $('refresh-pool').disabled = false; renderValuations(); }
+    for (const id of ['pool-refresh-status','pool-list-status']) setLoadState(id,{error:true,
+      text:currentPool ? 'Last observed pool · refresh unavailable. Select Refresh to retry.' : 'Mainnet pool unavailable. Select Refresh to retry.'});
+  } finally { poolBusy = false; $('refresh-pool').disabled = false; $('refresh-pool-list').disabled = false; finishStartup(); renderValuations(); }
 }
-$('refresh-pool').onclick = refreshPool;
+$('refresh-pool').onclick = refreshPool; $('refresh-pool-list').onclick = refreshPool;
 let marketSnapshot = null, launchpadRegistry = null, marketsBusy = false;
 function marketMethodology() {
   modal('Circulating market capitalization', '<p>Market capitalization is the current pool price multiplied by circulating supply. The on-chain quote is in xUSDC. Financial estimates use its intended 1:1 USDC backing as a USD reference, then apply current FX for your selected currency.</p><p>All unlocked on-chain XRS is included: genesis allocations, mined wallet balances and active approved AMM inventory. Treasury and company ownership alone do not exclude holdings. Burned, staked and locked balances are excluded; wrapped XRS is counted once.</p><p class="footnote">These are USD-equivalent estimates, not a guaranteed redemption price. xUSDC is issued by the Xeris treasury and is separate from Circle-issued USDC. A dash means pricing, circulating supply or a current FX quote is unavailable; expired FX rates are never reused.</p><a class="button outline" href="#network" id="view-market-network">View network intelligence</a>');
@@ -158,13 +205,16 @@ function renderMarkets() {
     }
   } catch {
     const status = document.createElement('span'); status.className = 'market-ticker market-empty';
-    status.textContent = 'Launchpad markets unavailable'; nodes.splice(0,nodes.length,status);
+    status.textContent = marketsBusy ? 'Loading launchpad markets…' : 'Launchpad markets unavailable';
+    status.setAttribute('role','status'); status.setAttribute('aria-busy',String(marketsBusy));
+    status.classList.toggle('loading-inline',marketsBusy); nodes.splice(0,nodes.length,status);
+    if (!marketsBusy) { const retry = document.createElement('button'); retry.className = 'text-button market-retry'; retry.textContent = 'Retry markets'; retry.onclick = refreshMarkets; nodes.push(retry); }
   }
   $('launchpad-tickers').replaceChildren(...nodes);
 }
 async function refreshMarkets() {
   if (marketsBusy) return;
-  marketsBusy = true;
+  marketsBusy = true; renderMarkets();
   try { await checkChain(); launchpadRegistry = await getLaunchpadTokens(); }
   catch { launchpadRegistry = null; }
   finally { marketsBusy = false; renderMarkets(); }
@@ -174,9 +224,12 @@ function setFeedValue(name, value) { document.querySelectorAll(`[data-feed="${na
 let lastBlockHashes = new Set();
 function renderNetwork(state) {
   marketSnapshot = state.status === 'ready' ? state : null;
-  const label = state.status === 'ready' ? 'Updating live' : state.status === 'paused' ? 'Paused' : state.status === 'stale' ? 'Data expired' : 'Reconnecting';
-  $('network-live-status').textContent = label; $('network-live-status').dataset.state = state.status;
+  const loading = state.status === 'loading';
+  const label = state.status === 'ready' ? 'Updating live' : loading ? 'Loading mainnet feed…' : state.status === 'paused' ? 'Updates paused' : state.status === 'stale' ? 'Data expired' : 'Feed unavailable';
+  setLoadState('network-live-status',{text:label,loading}); $('network-live-status').dataset.state = state.status;
+  $('retry-feed').classList.toggle('hidden',state.status === 'ready' || state.status === 'paused' || loading);
   setFeedValue('state',label);
+  document.querySelectorAll('[data-feed="state"]').forEach(node => { node.classList.toggle('loading-inline',loading); node.setAttribute('role','status'); node.setAttribute('aria-busy',String(loading)); });
   if (!marketSnapshot) {
     ['circulating','market-cap','mined','slot'].forEach(name => setFeedValue(name,'—'));
     $('xrs-market-cap').textContent = '—'; $('xrs-market-ticker').setAttribute('aria-label','XRS market capitalization unavailable');
@@ -185,7 +238,7 @@ function renderNetwork(state) {
     document.querySelectorAll('[data-feed="mined"], [data-feed="circulating"]').forEach(el => { el.removeAttribute('title'); el.removeAttribute('aria-label'); });
     $('block-reward').textContent = '—'; $('block-observed-time').textContent = 'Awaiting network';
     $('network-update-time').textContent = state.reason || 'Connecting to the public feed.';
-    $('block-stream-status').textContent = state.reason || 'Connecting to mainnet…';
+    setLoadState('block-stream-status',{text:loading ? 'Loading mainnet blocks and supply…' : state.reason || 'Network feed unavailable. Retry the feed.',loading,error:!loading && state.status !== 'paused'});
     $('block-stream-status').classList.remove('hidden'); $('block-rows').replaceChildren();
     renderValuations(); return;
   }
@@ -197,7 +250,7 @@ function renderNetwork(state) {
   $('block-reward').textContent = `${state.reward.replace(/(\.\d*?[1-9])0+$|\.0+$/,'$1')} XRS`;
   $('block-observed-time').textContent = timeLabel(state.blocks[0].timestamp);
   $('network-update-time').textContent = `Census updated ${timeLabel(state.observedAt)}`;
-  $('block-stream-status').classList.add('hidden');
+  setLoadState('block-stream-status',{text:'Mainnet blocks and supply updated.'}); $('block-stream-status').classList.add('hidden');
   const rows = state.blocks.map(block => {
     const tr = document.createElement('tr');
     if (lastBlockHashes.size && !lastBlockHashes.has(block.hash)) tr.className = 'new-block';
@@ -211,12 +264,16 @@ function renderNetwork(state) {
   lastBlockHashes = new Set(state.blocks.map(row => row.hash)); $('block-rows').replaceChildren(...rows); renderValuations();
 }
 const marketFeed = createMarketFeed({onState:renderNetwork});
+let feedRunning = false;
+function startNetworkFeed() { if (feedRunning) return; feedRunning = true; renderNetwork({status:'loading',reason:'Loading mainnet blocks and supply…'}); marketFeed.start(); }
+function stopNetworkFeed() { feedRunning = false; marketFeed.stop(); }
+$('retry-feed').onclick = () => { stopNetworkFeed(); startNetworkFeed(); };
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) { marketFeed.stop(); currencyController.stop(); }
-  else { marketFeed.start(); currencyController.start(); refreshMarkets(); }
+  if (document.hidden) { stopNetworkFeed(); currencyController.stop(); }
+  else { startNetworkFeed(); currencyController.start(); refreshMarkets(); }
 });
-window.addEventListener('pagehide', () => { marketFeed.stop(); currencyController.stop(); });
-window.addEventListener('pageshow', () => { if (!document.hidden) { marketFeed.start(); currencyController.start(); } });
+window.addEventListener('pagehide', () => { stopNetworkFeed(); currencyController.stop(); });
+window.addEventListener('pageshow', () => { if (!document.hidden) { startNetworkFeed(); currencyController.start(); } });
 
 function renderBalances() {
   renderDepositState();
@@ -224,20 +281,25 @@ function renderBalances() {
   $('native-balance').textContent = balances ? formatAmount(balances.nativeRaw,9) : '—';
   $('wrapped-balance').textContent = balances ? formatAmount(balances.wrappedRaw,9) : '—';
   $('usdc-balance').textContent = balances ? formatAmount(balances.usdcRaw,6) : '—';
-  $('pay-balance').textContent = balances ? `Balance: ${formatAmount(buying ? balances.usdcRaw : balances.wrappedRaw,buying?6:9,6)}` : 'Connect for balance';
+  $('pay-balance').textContent = balances ? `Balance: ${formatAmount(buying ? balances.usdcRaw : balances.wrappedRaw,buying?6:9,6)}` : !address ? 'Connect for balance' : balanceStatus === 'loading' ? 'Loading balance…' : 'Balance unavailable';
+  setLoadState('balance-status',{text:!address ? 'Connect a Xeris wallet to load balances.' : balanceStatus === 'loading' ? (balances ? 'Refreshing Xeris balances…' : 'Loading Xeris balances…') : balanceStatus === 'ready' ? 'Xeris balances updated.' : 'Xeris balances unavailable. Select Retry balances.',loading:balanceStatus === 'loading',error:balanceStatus === 'error'});
+  $('refresh-balances').disabled = !address || balanceStatus === 'loading';
+  $('refresh-balances').textContent = balanceStatus === 'error' ? 'Retry balances' : 'Refresh balances';
   renderFiatEstimates();
 }
 async function refreshBalances() {
   if (!address) return;
   const owner = address, generation = connectionGeneration;
+  balanceStatus = 'loading'; renderBalances();
   let read = balanceReads.get(owner);
   if (!read) {
     read = getBalances(owner).finally(() => { if (balanceReads.get(owner) === read) balanceReads.delete(owner); });
     balanceReads.set(owner, read);
   }
-  try { const result = await read; if (address === owner && connectionGeneration === generation) { balances = result; renderBalances(); } }
-  catch(error) { if (address === owner && connectionGeneration === generation) { balances = null; renderBalances(); say(error.message); } }
+  try { const result = await read; if (address === owner && connectionGeneration === generation) { balances = result; balanceStatus = 'ready'; renderBalances(); } }
+  catch(error) { if (address === owner && connectionGeneration === generation) { balances = null; balanceStatus = 'error'; renderBalances(); say(error.message); } }
 }
+$('refresh-balances').onclick = refreshBalances;
 function pending() {
   if (!address) return null;
   try { const item = getPending(address); historyError = false; return item; }
@@ -247,7 +309,10 @@ function updateAction() {
   renderDepositState();
   const outstanding = pending();
   $('trade-button').textContent = connecting ? 'Connecting wallet…' : busy ? 'Waiting for wallet / transaction…' : outstanding ? 'Check pending transaction' : address ? 'Review swap' : 'Connect Xeris wallet';
-  $('trade-button').disabled = busy || connecting || historyError || (!!address && !outstanding && !quote);
+  $('trade-button').disabled = busy || connecting || historyError || (!!address && !outstanding && !activeTradeValuation());
+  $('trade-button').classList.toggle('loading-inline',busy || connecting);
+  $('connect-button').classList.toggle('loading-inline',connecting);
+  $('trade-button').setAttribute('aria-busy',String(busy || connecting));
   ['pay-amount','buy-tab','sell-tab','reverse'].forEach(id => $(id).disabled = busy);
 }
 async function connect() {
@@ -274,7 +339,7 @@ async function connect() {
     validateRecipient(owner);
     if (String(await candidate.getRpcUrl()).replace(/\/$/,'') !== CONFIG.rpc) throw new Error('Select Xeris mainnet in your wallet first.');
     await checkChain(); if (generation !== connectionGeneration) return;
-    provider = candidate; connectingProvider = null; address = owner; balances = null; renderBalances();
+    provider = candidate; connectingProvider = null; address = owner; balances = null; balanceStatus = 'loading'; renderBalances();
     $('connect-button').textContent = `${owner.slice(0,5)}…${owner.slice(-4)}`;
     await refreshBalances(); if (generation !== connectionGeneration) return;
     renderHistory(); updateAction();
@@ -282,7 +347,7 @@ async function connect() {
   } catch(error) { if (generation === connectionGeneration) { clearConnection(); say(error.message); } }
   finally { if (generation === connectionGeneration) { connecting = false; connectingProvider = null; $('connect-button').disabled = false; updateAction(); } }
 }
-function clearConnection() { connectionGeneration++; connecting = false; connectingProvider = null; $('connect-button').disabled = false; provider = null; address = null; balances = null; $('connect-button').textContent = 'Connect Xeris'; renderBalances(); renderHistory(); updateAction(); }
+function clearConnection() { connectionGeneration++; connecting = false; connectingProvider = null; $('connect-button').disabled = false; provider = null; address = null; balances = null; balanceStatus = 'idle'; $('connect-button').textContent = 'Connect Xeris'; renderBalances(); renderHistory(); updateAction(); }
 $('connect-button').onclick = connect;
 function setDirection(value) {
   if (busy) return;
@@ -294,34 +359,41 @@ function setDirection(value) {
   renderBalances(); scheduleQuote();
 }
 $('buy-tab').onclick = () => setDirection(true); $('sell-tab').onclick = () => setDirection(false); $('reverse').onclick = () => setDirection(!buying);
-function clearQuote() { quote = null; ['minimum-output','price-impact','receive-amount'].forEach(id => $(id).textContent = '—'); $('trade-fee').textContent = '0.3%'; renderFiatEstimates(); updateAction(); }
+function clearQuote() { clearTimeout(quoteExpiryTimer); quoteExpiryTimer = null; quote = null; renderFiatEstimates(); updateAction(); }
 function scheduleQuote() {
   const generation = ++quoteGeneration; clearTimeout(quoteTimer); clearQuote();
   if (!$('pay-amount').value.trim()) { message('Enter an amount to get a live quote.'); return; }
   let amount; try { amount = parseAmount($('pay-amount').value,buying?6:9); } catch(error) { message(error.message,true); return; }
-  message('Fetching the current pool quote…');
+  message('Loading the current pool quote…',false,true);
   const direction = buying;
   quoteTimer = setTimeout(async () => {
     try {
       const result = await getQuote(direction,amount); if (generation !== quoteGeneration) return;
-      quote = result; const decimals = direction?9:6, token = direction?'wXRS':'xUSDC';
-      $('receive-amount').textContent = formatAmount(result.outputRaw,decimals,decimals);
-      $('minimum-output').textContent = `${formatAmount(result.minimumOutputRaw,decimals)} ${token}`;
-      $('price-impact').textContent = result.priceImpactPercent + '%';
-      $('trade-fee').textContent = `${formatAmount(result.feeRaw,direction?6:9)} ${direction?'xUSDC':'wXRS'}`;
+      quote = result;
+      const value = activeTradeValuation();
+      if (!value) throw new Error('The quote is unavailable or no longer matches this amount. Refresh it before continuing.');
+      quoteExpiryTimer = setTimeout(() => {
+        if (quote !== result) return;
+        clearQuote();
+        if ($('info-dialog').dataset.swapReview === 'true') closeModal();
+        message('Quote expired. Refresh the quote before continuing.',true);
+      },Math.max(0,value.expiresAt-Date.now()));
       message(Number(result.priceImpactPercent) >= 5 ? 'This small pool gives this trade a price impact of 5% or more. Review the amount carefully.' : direction ? 'Swap to wXRS, then convert it 1:1 to native XRS.' : 'Selling native XRS? Convert it to wXRS in Portfolio first.');
       renderFiatEstimates(); updateAction();
     } catch(error) { if (generation === quoteGeneration) { clearQuote(); message(error.message,true); } }
   },650);
 }
-$('pay-amount').addEventListener('input',scheduleQuote);
+$('pay-amount').addEventListener('input',scheduleQuote); $('refresh-quote').onclick = scheduleQuote;
 $('swap-form').onsubmit = async e => {
   e.preventDefault(); if (busy) return;
   if (!address) { await connect(); return; }
   if (pending()) { location.hash='activity'; await reconcilePending(); return; }
-  if (!quote || Date.now() - quote.quotedAt > 30000) { scheduleQuote(); message('Quote expired. Review the refreshed amount before signing.'); return; }
+  const valuation = activeTradeValuation();
+  if (!valuation) { scheduleQuote(); message('Quote expired. Review the refreshed amount before signing.'); return; }
   const q = quote, owner = address;
-  modal('Review your swap', `<p class="review-amount">${formatAmount(q.inputRaw,q.buying?6:9)} ${q.buying?'xUSDC':'wXRS'}</p><p>Estimated received: ${formatAmount(q.outputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p>Minimum received: ${formatAmount(q.minimumOutputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p>Pool fee: 0.3%, included. Network fee: 0.001 native XRS.</p><p>${q.buying?'A separate 1:1 unwrap makes the received wXRS native. That step costs another 0.001 XRS.':'This gives you xUSDC on Xeris. Solana USDC redemption is currently unavailable.'}</p><button class="primary wide" id="approve-swap">Approve in wallet</button>`);
+  modal('Review your swap', `<p class="review-amount">${formatAmount(q.inputRaw,q.buying?6:9)} ${q.buying?'xUSDC':'wXRS'}</p>${q.buying?'':'<p>Market value: <strong id="review-market-value"></strong><br><small>Pool spot value before fees and price impact.</small></p>'}<p>${q.buying?'Estimated received':'Estimated proceeds'}: ${formatAmount(q.outputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p>Minimum received: ${formatAmount(q.minimumOutputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p class="footnote">The 0.5% slippage tolerance sets a minimum, not an additional fee. The quoted proceeds already include the 0.3% pool fee and price impact. Network fee: 0.001 native XRS, paid separately.</p><p>${q.buying?'A separate 1:1 unwrap makes the received wXRS native. That step costs another 0.001 XRS.':'This gives you xUSDC on Xeris. Solana USDC redemption is currently unavailable.'}</p><button class="primary wide" id="approve-swap">Approve in wallet</button>`);
+  swapReviewQuote = q; $('info-dialog').dataset.swapReview = 'true';
+  if (!q.buying) { const marketValue = valuationMoney(valuation.marketValue); $('review-market-value').textContent = marketValue ? `≈ ${marketValue}` : 'Unavailable'; }
   $('approve-swap').onclick = async () => {
     if (busy || address !== owner) return;
     closeModal(); await submitStep({action:q.buying?'buy':'sell',amountRaw:q.inputRaw,minOutputRaw:q.minimumOutputRaw,expectedOutputRaw:q.outputRaw,quoteTime:q.quotedAt});
@@ -330,9 +402,9 @@ $('swap-form').onsubmit = async e => {
 async function submitStep(request) {
   if (busy || !address || !provider) return;
   busy = true; const owner = address; const selectedProvider = provider; updateAction();
-  message('Review the exact transaction in your wallet.');
+  message('Waiting for your wallet approval…',false,true);
   try {
-    const result = await execute({provider:selectedProvider,address:owner,...request}, {onStatus:text => { if (address === owner) message(text); }});
+    const result = await execute({provider:selectedProvider,address:owner,...request}, {onStatus:text => { if (address === owner) message(text,false,true); }});
     if (address !== owner) { say('Transaction saved for the original wallet. Reconnect it to check activity.'); return; }
     renderHistory();
     if (result.status === 'confirmed') { say(request.action === 'buy' ? 'Swap confirmed. Convert the received wXRS to native XRS in Portfolio.' : `${request.action === 'sell'?'Swap':'Conversion'} confirmed.`); }
@@ -521,6 +593,6 @@ $('display-currency').onchange = () => {
   currencyController.select(code);
 };
 route(); refreshPool(); refreshMarkets(); updateAction(); renderValuations();
-if (!document.hidden) { marketFeed.start(); currencyController.start(); }
+if (!document.hidden) { startNetworkFeed(); currencyController.start(); }
 setInterval(() => { if (!document.hidden) refreshMarkets(); }, 60000);
 setInterval(()=>{ if (!document.hidden && !busy) refreshPool(); if (quote && Date.now()-quote.quotedAt>30000) { clearQuote(); message('Quote expired. Refresh by editing the amount.'); } },30000);
