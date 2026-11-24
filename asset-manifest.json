@@ -1,0 +1,38 @@
+[
+  {
+    "path": "dist/assets/inter.woff2",
+    "source_url": "https://dex.xerisweb.com/_next/static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2",
+    "sha256": "c940764593d0fe5d596be327ca7558855e018039fb78509aa21921fd3644c3e4",
+    "bytes": 48432
+  },
+  {
+    "path": "dist/assets/jakarta.woff2",
+    "source_url": "https://dex.xerisweb.com/_next/static/media/fba5a26ea33df6a3-s.p.1bbdebe6.woff2",
+    "sha256": "cd8db90cd950e26bc8761f65d323588bd5cd112d326d6d322bc7c8ea86771215",
+    "bytes": 27272
+  },
+  {
+    "path": "dist/assets/favicon.ico",
+    "source_url": "https://dex.xerisweb.com/favicon.ico",
+    "sha256": "2b8ad2d33455a8f736fc3a8ebf8f0bdea8848ad4c0db48a2833bd0f9cd775932",
+    "bytes": 25931
+  },
+  {
+    "path": "dist/assets/favicon.ico",
+    "source_url": "https://dex.xerisweb.com/favicon.ico?favicon.0b3bf435.ico",
+    "sha256": "2b8ad2d33455a8f736fc3a8ebf8f0bdea8848ad4c0db48a2833bd0f9cd775932",
+    "bytes": 25931
+  },
+  {
+    "path": "dist/assets/xeris.png",
+    "source_url": "https://dex.xerisweb.com/logos/LogoDark.png",
+    "sha256": "63cffb851db33a2aae86e371fadcb60b437399ef233652859476b3138837caf7",
+    "bytes": 18219
+  },
+  {
+    "path": "dist/assets/usdc.png",
+    "source_url": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
+    "sha256": "6d14601d0b1109046e366592b8c0f256ffb075f69180b65dddd97ae665d49f9e",
+    "bytes": 9276
+  }
+]

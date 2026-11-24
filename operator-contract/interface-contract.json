@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "implementation_status": "OFFLINE_INTAKE_PREPARATION_ONLY",
+  "public_endpoint": null,
+  "public_service_enabled": false,
+  "can_accept_funds": false,
+  "settlement_authorized": false,
+  "frontend_rule": "Show bridge deposit/redemption as unavailable. Do not instruct a user to send or burn funds based on this offline contract.",
+  "purpose": "Ownership-authenticated request intake and transaction-locator deduplication. It does not verify chain receipts or release funds.",
+  "audience_identifier": "https://mainnetrpc.xerisweb.com/operator",
+  "audience_is_live_endpoint": false,
+  "network": {
+    "solana_genesis": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+    "xeris_chain_id": "xeris-mainnet-v4",
+    "usdc_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "reserve_token_account": "BeM8R5hvdKGwiV5jKdug3kXoe6RaFaREjihKFNSjeBD6",
+    "xeris_token_id": "xeris_usdc"
+  },
+  "policy": {
+    "maximum_request_raw": "500000",
+    "decimals": 6,
+    "challenge_lifetime_seconds": 600,
+    "maximum_challenge_lifetime_seconds": 900,
+    "amount_limit_authorizes_fund_movement": false
+  },
+  "local_library_operations": [
+    {
+      "method": "RequestJournal.issue_intent",
+      "input_fields": ["kind", "amount_raw", "source_owner", "destination_owner", "solana_token_account"],
+      "result": "A server-generated nonce, exact intent and exact UTF-8 ownership-proof message. No request is accepted yet."
+    },
+    {
+      "method": "RequestJournal.accept_request",
+      "input_fields": ["intent", "signature"],
+      "result": "Verifies an Ed25519 ownership signature, atomically consumes the issued nonce and returns REQUESTED. Exact retries return the same request ID."
+    },
+    {
+      "method": "RequestJournal.locator_challenge",
+      "input_fields": ["request_id", "transaction_id", "instruction_index"],
+      "result": "An exact ownership-proof message binding one top-level source-chain instruction to the accepted request."
+    },
+    {
+      "method": "RequestJournal.declare_transaction",
+      "input_fields": ["locator", "signature"],
+      "result": "Verifies the original source owner's signature and reserves the chain/transaction/instruction tuple globally. Status is EVIDENCE_DECLARED, not confirmed."
+    },
+    {
+      "method": "RequestJournal.status",
+      "input_fields": ["request_id"],
+      "result": "Internal status only. A future public adapter must authenticate status access before calling this method."
+    }
+  ],
+  "field_roles": {
+    "deposit": {
+      "source_owner": "Solana source-token authority and ownership-proof signer",
+      "destination_owner": "Xeris account to receive xUSDC after independently verified deposit and approved issuance",
+      "solana_token_account": "Source Solana USDC token account; mint and authority require independent on-chain verification"
+    },
+    "redeem": {
+      "source_owner": "Xeris xUSDC holder and ownership-proof signer",
+      "destination_owner": "Solana payout recipient",
+      "solana_token_account": "Requested destination USDC account; mint and authority require independent on-chain verification"
+    }
+  },
+  "signing": {
+    "algorithm": "Ed25519",
+    "signature_encoding": "base58, exactly 64 decoded bytes",
+    "public_key_encoding": "base58, exactly 32 decoded bytes",
+    "canonical_json": "Recursively sort object keys lexicographically, no whitespace, ordinary JSON scalars. Approved fields are ASCII. amount_raw is a canonical positive decimal string, never a float.",
+    "intent_prefix": "Xeris request ownership proof\nxeris-mainnet-usdc-operator-intent-v1\n",
+    "locator_prefix": "Xeris transaction locator ownership proof\nxeris-mainnet-usdc-operator-locator-v1\n",
+    "message_bytes": "UTF-8 prefix followed immediately by canonical JSON, with no trailing newline",
+    "intent_digest": "Lowercase hexadecimal SHA-256 of the complete intent signing-message bytes",
+    "warning": "Ownership proof only. Never sign this message with a treasury, reserve or producer key. It is not a chain transaction and cannot authorize settlement."
+  },
+  "status_ui": {
+    "REQUESTED": {
+      "label": "Request received for review",
+      "funds_available": false,
+      "chain_evidence_verified": false,
+      "settlement_authorized": false
+    },
+    "EVIDENCE_DECLARED": {
+      "label": "Transaction submitted for verification",
+      "funds_available": false,
+      "chain_evidence_verified": false,
+      "settlement_authorized": false
+    }
+  },
+  "not_implemented": [
+    "Public HTTP service, endpoint authentication, status authorization, rate limits and resource admission",
+    "Solana finalized-deposit and Xeris executed-burn verification bound to every accepted request",
+    "Global reserve and liability reconciliation across all issuance and redemption requests",
+    "Live signing, scoped approvals, transaction preparation, submission and ambiguous-send recovery",
+    "Minted, burned, paid, failed or rejected settlement status transitions",
+    "Payout index serialization, liquidity checks and restart recovery for public operation"
+  ]
+}

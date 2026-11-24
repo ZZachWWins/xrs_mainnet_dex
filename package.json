@@ -1,0 +1,15 @@
+{
+  "name": "xrs-mainnet-dex",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Xeris mainnet DEX commissioning client",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test-model.mjs test-trade.mjs",
+    "build": "node build.mjs",
+    "dev": "python3 -m http.server 8769 --bind 127.0.0.1 --directory dist"
+  }
+}

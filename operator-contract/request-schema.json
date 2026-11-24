@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:xeris:mainnet:operator:request-intake:v1",
+  "title": "Offline Xeris request ownership-proof contract",
+  "description": "Schema validation alone never verifies a signature, chain evidence or settlement authority.",
+  "$defs": {
+    "publicAddress": {
+      "type": "string",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{32,44}$",
+      "description": "Implementation also requires exactly 32 base58-decoded bytes."
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{64,88}$",
+      "description": "Implementation also requires exactly 64 base58-decoded bytes."
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["solana_genesis", "xeris_chain_id", "usdc_mint", "reserve_token_account", "xeris_token_id"],
+      "properties": {
+        "solana_genesis": {"const": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d"},
+        "xeris_chain_id": {"const": "xeris-mainnet-v4"},
+        "usdc_mint": {"const": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"},
+        "reserve_token_account": {"const": "BeM8R5hvdKGwiV5jKdug3kXoe6RaFaREjihKFNSjeBD6"},
+        "xeris_token_id": {"const": "xeris_usdc"}
+      }
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "domain", "audience", "kind", "nonce", "created_at", "expires_at", "network", "amount_raw", "source_owner", "destination_owner", "solana_token_account"],
+      "properties": {
+        "schema_version": {"type": "integer", "const": 1},
+        "domain": {"const": "xeris-mainnet-usdc-operator-intent-v1"},
+        "audience": {"const": "https://mainnetrpc.xerisweb.com/operator"},
+        "kind": {"enum": ["deposit", "redeem"]},
+        "nonce": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "created_at": {"type": "integer", "minimum": 0},
+        "expires_at": {"type": "integer", "minimum": 0},
+        "network": {"$ref": "#/$defs/network"},
+        "amount_raw": {"type": "string", "pattern": "^[1-9][0-9]{0,18}$", "description": "Must also be <= the configured maximum_request_raw; default is 500000."},
+        "source_owner": {"$ref": "#/$defs/publicAddress"},
+        "destination_owner": {"$ref": "#/$defs/publicAddress"},
+        "solana_token_account": {"$ref": "#/$defs/publicAddress"}
+      }
+    },
+    "signedRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent", "signature"],
+      "properties": {
+        "intent": {"$ref": "#/$defs/intent"},
+        "signature": {"$ref": "#/$defs/signature"}
+      }
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "domain", "audience", "request_id", "intent_digest", "source_chain", "transaction_id", "instruction_index"],
+      "properties": {
+        "schema_version": {"type": "integer", "const": 1},
+        "domain": {"const": "xeris-mainnet-usdc-operator-locator-v1"},
+        "audience": {"const": "https://mainnetrpc.xerisweb.com/operator"},
+        "request_id": {"type": "string", "pattern": "^xri_[0-9a-f]{48}$"},
+        "intent_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_chain": {"enum": ["5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d", "xeris-mainnet-v4"]},
+        "transaction_id": {"$ref": "#/$defs/signature"},
+        "instruction_index": {"type": "integer", "minimum": 0, "maximum": 255}
+      }
+    },
+    "signedLocator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "signature"],
+      "properties": {
+        "locator": {"$ref": "#/$defs/locator"},
+        "signature": {"$ref": "#/$defs/signature"}
+      }
+    }
+  },
+  "oneOf": [{"$ref": "#/$defs/signedRequest"}, {"$ref": "#/$defs/signedLocator"}]
+}

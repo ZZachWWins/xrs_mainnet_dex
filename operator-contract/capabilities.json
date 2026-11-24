@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "status": "OFFLINE_INTAKE_PREPARATION_ONLY",
+  "public_service_enabled": false,
+  "automatic_issuance_enabled": false,
+  "automatic_redemption_enabled": false,
+  "can_accept_funds": false,
+  "network": {
+    "solana_genesis": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+    "xeris_chain_id": "xeris-mainnet-v4",
+    "usdc_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "reserve_token_account": "BeM8R5hvdKGwiV5jKdug3kXoe6RaFaREjihKFNSjeBD6",
+    "xeris_token_id": "xeris_usdc"
+  },
+  "policy": {
+    "maximum_request_raw": "500000",
+    "challenge_lifetime_seconds": 600
+  },
+  "ownership_proofs": "Ed25519 over the exact domain-bound canonical UTF-8 message",
+  "intent_statuses": [
+    "REQUESTED",
+    "EVIDENCE_DECLARED"
+  ],
+  "settlement_authority": false,
+  "chain_evidence_verified": false,
+  "missing_before_public_service": [
+    "An authenticated and rate-limited public API with status access control",
+    "Independent finalized Solana deposit validation bound to the request",
+    "Xeris burn/issuance evidence validation and an explicit confirmation policy",
+    "Global reserve/supply/pending-issuance/unpaid-redemption accounting",
+    "Scoped signer authorization, transaction preparation and submission/recovery adapters",
+    "Durable reserve transaction-index serialization and payout reconciliation",
+    "Operational recovery, monitoring and a funded application test"
+  ]
+}
