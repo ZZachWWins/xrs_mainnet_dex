@@ -50,18 +50,30 @@ def encode_rpc_transaction(tx):
     p.require(type(tx) is dict and set(tx) == {'signatures', 'message'}, 'Invalid raw transaction')
     sigs = _rpc_vec(tx['signatures'])
     message = tx['message']
-    p.require(type(message) is dict and set(message) == {'header', 'account_keys', 'recent_blockhash', 'instructions'}, 'Invalid raw message')
+    # Live solana-sdk serde emits camelCase. Older public fixtures used
+    # snake_case. Choose one complete dialect for this transaction and require
+    # it consistently at message, header and instruction levels; never merge
+    # aliases or silently prefer one conflicting spelling.
+    p.require(type(message) is dict, 'Invalid raw message')
+    if set(message) == {'header', 'accountKeys', 'recentBlockhash', 'instructions'}:
+        keys_field, hash_field, program_field = 'accountKeys', 'recentBlockhash', 'programIdIndex'
+        header_fields = ('numRequiredSignatures', 'numReadonlySignedAccounts', 'numReadonlyUnsignedAccounts')
+    elif set(message) == {'header', 'account_keys', 'recent_blockhash', 'instructions'}:
+        keys_field, hash_field, program_field = 'account_keys', 'recent_blockhash', 'program_id_index'
+        header_fields = ('num_required_signatures', 'num_readonly_signed_accounts', 'num_readonly_unsigned_accounts')
+    else:
+        raise ValueError('Invalid raw message field dialect')
     header = message['header']
-    p.require(type(header) is dict and set(header) == {'num_required_signatures', 'num_readonly_signed_accounts', 'num_readonly_unsigned_accounts'}, 'Invalid message header')
-    keys, instructions = _rpc_vec(message['account_keys']), _rpc_vec(message['instructions'])
+    p.require(type(header) is dict and set(header) == set(header_fields), 'Invalid message header field dialect')
+    keys, instructions = _rpc_vec(message[keys_field]), _rpc_vec(message['instructions'])
     wire = p._shortvec(len(sigs)) + b''.join(_bytes(sig, 64) for sig in sigs)
-    wire += _bytes([header[key] for key in ('num_required_signatures', 'num_readonly_signed_accounts', 'num_readonly_unsigned_accounts')], 3)
-    wire += p._shortvec(len(keys)) + b''.join(_bytes(key, 32) for key in keys) + _bytes(message['recent_blockhash'], 32)
+    wire += _bytes([header[key] for key in header_fields], 3)
+    wire += p._shortvec(len(keys)) + b''.join(_bytes(key, 32) for key in keys) + _bytes(message[hash_field], 32)
     wire += p._shortvec(len(instructions))
     for ix in instructions:
-        p.require(type(ix) is dict and set(ix) == {'program_id_index', 'accounts', 'data'}, 'Invalid raw instruction')
+        p.require(type(ix) is dict and set(ix) == {program_field, 'accounts', 'data'}, 'Invalid raw instruction field dialect')
         accounts, data = _rpc_vec(ix['accounts']), _rpc_vec(ix['data'])
-        wire += _bytes([ix['program_id_index']], 1) + p._shortvec(len(accounts)) + _bytes(accounts)
+        wire += _bytes([ix[program_field]], 1) + p._shortvec(len(accounts)) + _bytes(accounts)
         wire += p._shortvec(len(data)) + _bytes(data)
     decode_transaction(base64.b64encode(wire).decode(), allow_multi=True)
     return base64.b64encode(wire).decode()
