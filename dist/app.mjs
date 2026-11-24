@@ -2,7 +2,10 @@ import {CONFIG, getPool, getQuote, getBalances, checkChain, parseAmount, formatA
 import {execute, reconcile, getHistory, getPending} from './trade.mjs';
 const $ = id => document.getElementById(id);
 let provider = null, address = null, balances = null, buying = true, quote = null;
-let quoteTimer, quoteGeneration = 0, busy = false, poolBusy = false, balanceBusy = false, reconcileBusy = false, historyError = false;
+let quoteTimer, quoteGeneration = 0, busy = false, poolBusy = false, reconcileBusy = false, historyError = false;
+let connectionGeneration = 0, connecting = false, connectingProvider = null;
+const balanceReads = new Map();
+const listeningProviders = new WeakSet();
 let observations = [], currentPool = null, lastObserved = 0;
 const say = message => { $('toast').textContent = message; $('toast').classList.remove('hidden'); clearTimeout(say.timer); say.timer = setTimeout(() => $('toast').classList.add('hidden'), 9000); };
 const message = (text, error = false) => { $('trade-message').textContent = text; $('trade-message').classList.toggle('error', error); };
@@ -23,9 +26,9 @@ function route() {
 }
 window.addEventListener('hashchange', route);
 $('menu-button').onclick = () => { const open = document.querySelector('nav').classList.toggle('open'); $('menu-button').setAttribute('aria-expanded', String(open)); };
-$('more-button').onclick = () => modal('More on Xeris', `<p>These sections are being prepared for mainnet.</p><div class="more-grid"><div>Stake<small class="native-badge">Producer roster is restricted</small></div><div>Agents<small class="native-badge">Not enabled in this DEX</small></div><div>Alexandria<small class="native-badge">Not enabled in this DEX</small></div><div>Governance<small class="native-badge">Not enabled in this DEX</small></div></div><p class="footnote">The current mainnet experience includes pool quotes, wallet-approved swaps, balance views, and transaction recovery.</p>`);
+$('more-button').onclick = () => modal('Network services', `<p>Service availability</p><div class="more-grid"><div>Stake<small class="native-badge">Restricted producer roster</small></div><div>Agents<small class="native-badge">Unavailable</small></div><div>Alexandria<small class="native-badge">Unavailable</small></div><div>Governance<small class="native-badge">Unavailable</small></div></div><p class="footnote">Access pool trading, native asset conversion, account balances and transaction records through this interface.</p>`);
 function docs() {
-  modal('How mainnet trading works', `<p>Solana USDC backs xUSDC on Xeris. The pool trades xUSDC and wXRS, which converts 1:1 to native XRS.</p><ol class="review-list"><li>Public USDC deposit and redemption processing is still being prepared.</li><li>With xUSDC and native XRS for fees, approve a pool swap in your Xeris wallet.</li><li>Convert the received wXRS to native XRS in Portfolio. Selling reverses these steps.</li></ol><p>The pool takes 0.3% per swap. Each Xeris transaction costs 0.001 native XRS. The initial pool is small, so even modest trades can move its price.</p><p class="detail-code">${CONFIG.chainId}<br>${CONFIG.rpc}<br>${CONFIG.poolId}</p><p class="footnote">Your wallet signs locally. The website never requests a seed phrase or private key.</p>`);
+  modal('How mainnet trading works', `<p>Solana USDC backs xUSDC on Xeris. The pool trades xUSDC and wXRS, which converts 1:1 to native XRS.</p><ol class="review-list"><li>USDC deposit and redemption services are currently unavailable.</li><li>With xUSDC and native XRS for fees, approve a pool swap in your Xeris wallet.</li><li>Convert the received wXRS to native XRS in Portfolio. Selling reverses these steps.</li></ol><p>The pool takes 0.3% per swap. Each Xeris transaction costs 0.001 native XRS. Review price impact and the minimum received amount before approving each trade.</p><p class="detail-code">${CONFIG.chainId}<br>${CONFIG.rpc}<br>${CONFIG.poolId}</p><p class="footnote">Your wallet signs locally. The website never requests a seed phrase or private key.</p>`);
 }
 document.querySelectorAll('[data-docs]').forEach(el => el.onclick = docs);
 function renderChart() {
@@ -38,7 +41,7 @@ function renderChart() {
   $('chart-line').setAttribute('d', path);
   $('chart-area').setAttribute('d', points.length > 1 ? `${path} L${points.at(-1)[0]} 290 L${points[0][0]} 290 Z` : '');
   const [x,y] = points.at(-1); $('chart-point').setAttribute('cx',x); $('chart-point').setAttribute('cy',y);
-  $('chart-caption').textContent = observations.length < 2 ? 'First mainnet observation. More points appear as the pool refreshes.' : `${observations.length} observations from this session. Historical candles are not available yet.`;
+  $('chart-caption').textContent = 'Pool pricing in xUSDC. Refreshed every 30 seconds.';
 }
 async function refreshPool() {
   if (poolBusy) return;
@@ -69,11 +72,15 @@ function renderBalances() {
   $('pay-balance').textContent = balances ? `Balance: ${formatAmount(buying ? balances.usdcRaw : balances.wrappedRaw,buying?6:9,6)}` : 'Connect for balance';
 }
 async function refreshBalances() {
-  if (!address || balanceBusy) return;
-  balanceBusy = true; const owner = address;
-  try { const result = await getBalances(owner); if (address === owner) { balances = result; renderBalances(); } }
-  catch(error) { if (address === owner) { balances = null; renderBalances(); say(error.message); } }
-  finally { balanceBusy = false; }
+  if (!address) return;
+  const owner = address, generation = connectionGeneration;
+  let read = balanceReads.get(owner);
+  if (!read) {
+    read = getBalances(owner).finally(() => { if (balanceReads.get(owner) === read) balanceReads.delete(owner); });
+    balanceReads.set(owner, read);
+  }
+  try { const result = await read; if (address === owner && connectionGeneration === generation) { balances = result; renderBalances(); } }
+  catch(error) { if (address === owner && connectionGeneration === generation) { balances = null; renderBalances(); say(error.message); } }
 }
 function pending() {
   if (!address) return null;
@@ -82,12 +89,12 @@ function pending() {
 }
 function updateAction() {
   const outstanding = pending();
-  $('trade-button').textContent = busy ? 'Waiting for wallet / transaction…' : outstanding ? 'Check pending transaction' : address ? 'Review swap' : 'Connect Wallet';
-  $('trade-button').disabled = busy || historyError || (!!address && !outstanding && !quote);
+  $('trade-button').textContent = connecting ? 'Connecting wallet…' : busy ? 'Waiting for wallet / transaction…' : outstanding ? 'Check pending transaction' : address ? 'Review swap' : 'Connect Wallet';
+  $('trade-button').disabled = busy || connecting || historyError || (!!address && !outstanding && !quote);
   ['pay-amount','buy-tab','sell-tab','reverse'].forEach(id => $(id).disabled = busy);
 }
 async function connect() {
-  if (busy) return;
+  if (busy || connecting) return;
   if (address) {
     modal('Wallet connected', `<p class="detail-code" id="connected-address"></p><p>Only public balances and transaction IDs are stored by this website.</p><button class="outline button" id="disconnect-button">Disconnect</button>`);
     $('connected-address').textContent = address;
@@ -98,27 +105,34 @@ async function connect() {
   if (!candidate || !(candidate.isXerisWallet || candidate.isXeris) || typeof candidate.signTransaction !== 'function') {
     modal('Connect your Xeris wallet', '<p>Open this site inside the Xeris Android wallet’s browser, or use a compatible Xeris wallet extension.</p><p>Choose the mainnet network in your wallet, then connect here.</p><p class="footnote">No seed phrase or private key is needed on this website. Solana wallets are used for the future USDC deposit step, not for signing Xeris trades.</p>'); return;
   }
-  $('connect-button').disabled = true;
+  connecting = true; connectingProvider = candidate; const generation = ++connectionGeneration;
+  if (!listeningProviders.has(candidate)) {
+    const changed = () => { if (provider === candidate || connectingProvider === candidate) clearConnection(); };
+    candidate.on?.('accountChanged',changed); candidate.on?.('disconnect',changed); listeningProviders.add(candidate);
+  }
+  $('connect-button').disabled = true; updateAction();
   try {
     const result = await candidate.connect(); const owner = String(result.publicKey ?? result);
+    if (generation !== connectionGeneration) return;
     if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(owner)) throw new Error('The wallet did not return a valid public address.');
     if (String(await candidate.getRpcUrl()).replace(/\/$/,'') !== CONFIG.rpc) throw new Error('Select Xeris mainnet in your wallet first.');
-    await checkChain(); provider = candidate; address = owner;
+    await checkChain(); if (generation !== connectionGeneration) return;
+    provider = candidate; connectingProvider = null; address = owner; balances = null; renderBalances();
     $('connect-button').textContent = `${owner.slice(0,5)}…${owner.slice(-4)}`;
-    if (!connect.listening) { candidate.on?.('accountChanged',clearConnection); candidate.on?.('disconnect',clearConnection); connect.listening = true; }
-    await refreshBalances(); renderHistory(); updateAction();
+    await refreshBalances(); if (generation !== connectionGeneration) return;
+    renderHistory(); updateAction();
     if (pending()) { location.hash = 'activity'; say('A saved transaction needs confirmation. Check its original ID before trading again.'); }
-  } catch(error) { clearConnection(); say(error.message); }
-  finally { $('connect-button').disabled = false; }
+  } catch(error) { if (generation === connectionGeneration) { clearConnection(); say(error.message); } }
+  finally { if (generation === connectionGeneration) { connecting = false; connectingProvider = null; $('connect-button').disabled = false; updateAction(); } }
 }
-function clearConnection() { provider = null; address = null; balances = null; $('connect-button').textContent = 'Connect Wallet'; renderBalances(); renderHistory(); updateAction(); }
+function clearConnection() { connectionGeneration++; connecting = false; connectingProvider = null; $('connect-button').disabled = false; provider = null; address = null; balances = null; $('connect-button').textContent = 'Connect Wallet'; renderBalances(); renderHistory(); updateAction(); }
 $('connect-button').onclick = connect;
 function setDirection(value) {
   if (busy) return;
   buying = value; quote = null; quoteGeneration++; clearTimeout(quoteTimer);
   $('buy-tab').classList.toggle('selected',buying); $('sell-tab').classList.toggle('selected',!buying);
-  $('pay-token').innerHTML = buying ? '<img src="assets/usdc.png" alt="">xUSDC' : '<img src="assets/xeris.png" alt="">wXRS';
-  $('receive-token').innerHTML = buying ? '<img src="assets/xeris.png" alt="">wXRS' : '<img src="assets/usdc.png" alt="">xUSDC';
+  $('pay-token').innerHTML = buying ? '<img src="/assets/usdc.png" alt="">xUSDC' : '<img src="/assets/xeris.png" alt="">wXRS';
+  $('receive-token').innerHTML = buying ? '<img src="/assets/xeris.png" alt="">wXRS' : '<img src="/assets/usdc.png" alt="">xUSDC';
   $('receive-note').textContent = buying ? 'Convert to native after swap' : 'Redemption is a separate step';
   renderBalances(); scheduleQuote();
 }
@@ -150,7 +164,7 @@ $('swap-form').onsubmit = async e => {
   if (pending()) { location.hash='activity'; await reconcilePending(); return; }
   if (!quote || Date.now() - quote.quotedAt > 30000) { scheduleQuote(); message('Quote expired. Review the refreshed amount before signing.'); return; }
   const q = quote, owner = address;
-  modal('Review your swap', `<p class="review-amount">${formatAmount(q.inputRaw,q.buying?6:9)} ${q.buying?'xUSDC':'wXRS'}</p><p>Estimated received: ${formatAmount(q.outputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p>Minimum received: ${formatAmount(q.minimumOutputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p>Pool fee: 0.3%, included. Network fee: 0.001 native XRS.</p><p>${q.buying?'A separate 1:1 unwrap makes the received wXRS native. That step costs another 0.001 XRS.':'This gives you xUSDC on Xeris. Public redemption to Solana USDC is not open yet.'}</p><button class="primary wide" id="approve-swap">Approve in wallet</button>`);
+  modal('Review your swap', `<p class="review-amount">${formatAmount(q.inputRaw,q.buying?6:9)} ${q.buying?'xUSDC':'wXRS'}</p><p>Estimated received: ${formatAmount(q.outputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p>Minimum received: ${formatAmount(q.minimumOutputRaw,q.buying?9:6)} ${q.buying?'wXRS':'xUSDC'}</p><p>Pool fee: 0.3%, included. Network fee: 0.001 native XRS.</p><p>${q.buying?'A separate 1:1 unwrap makes the received wXRS native. That step costs another 0.001 XRS.':'This gives you xUSDC on Xeris. Solana USDC redemption is currently unavailable.'}</p><button class="primary wide" id="approve-swap">Approve in wallet</button>`);
   $('approve-swap').onclick = async () => {
     if (busy || address !== owner) return;
     closeModal(); await submitStep({action:q.buying?'buy':'sell',amountRaw:q.inputRaw,minOutputRaw:q.minimumOutputRaw,expectedOutputRaw:q.outputRaw,quoteTime:q.quotedAt});
@@ -161,7 +175,7 @@ async function submitStep(request) {
   busy = true; const owner = address; const selectedProvider = provider; updateAction();
   message('Review the exact transaction in your wallet.');
   try {
-    const result = await execute({provider:selectedProvider,address:owner,...request});
+    const result = await execute({provider:selectedProvider,address:owner,...request}, {onStatus:text => { if (address === owner) message(text); }});
     if (address !== owner) { say('Transaction saved for the original wallet. Reconnect it to check activity.'); return; }
     renderHistory();
     if (result.status === 'confirmed') { say(request.action === 'buy' ? 'Swap confirmed. Convert the received wXRS to native XRS in Portfolio.' : `${request.action === 'sell'?'Swap':'Conversion'} confirmed.`); }
@@ -204,9 +218,9 @@ function renderHistory() {
 }
 async function reconcilePending() {
   if (!address || reconcileBusy || busy) return;
-  reconcileBusy=true; $('reconcile-button').disabled=true;
-  try { const result=await reconcile(address); renderHistory(); updateAction(); await refreshBalances(); say(result ? `Transaction status: ${result.status}.` : 'No pending transaction.'); }
-  catch(error) { say(error.message); }
+  reconcileBusy=true; const owner=address, generation=connectionGeneration; $('reconcile-button').disabled=true;
+  try { const result=await reconcile(owner); if (address!==owner || generation!==connectionGeneration) return; renderHistory(); updateAction(); await refreshBalances(); if(address===owner && generation===connectionGeneration) say(result ? `Transaction status: ${result.status}.` : 'No pending transaction.'); }
+  catch(error) { if(address===owner && generation===connectionGeneration) say(error.message); }
   finally { reconcileBusy=false; $('reconcile-button').disabled=false; }
 }
 $('reconcile-button').onclick=reconcilePending;

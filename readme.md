@@ -53,6 +53,8 @@ The interface does not claim that this new client/operator code was covered by t
 
 ## Validation
 
-`npm test` runs 60 offline tests covering exact amounts, lossless JSON, pool identity, quote matching, wallet binding, transaction encoding, signature verification, balances/gas, storage failures, stale quotes, ambiguous submissions and receipt recovery. Codec bytes independently match all four action types from the public completed pilot artifacts. Tests use synthetic in-memory keys and mocked network writes. Browser checks use public mainnet reads; they do not spend funds.
+`npm test` runs 65 offline tests covering exact amounts, lossless JSON, pool identity, quote matching, wallet binding, transaction encoding, signature verification, balances/gas, storage failures, stale quotes, ambiguous submissions and receipt recovery. Codec bytes independently match all four action types from the public completed pilot artifacts. Tests use synthetic in-memory keys and mocked network writes. Browser checks use public mainnet reads; they do not spend funds.
 
 Image and font origins are recorded in `asset-manifest.json`. Live chart points are observations from the current browser session, not fabricated historic candles. LP fees remain in pool reserves for LP shareholders; there is no separate 0.777% company cut in this pool.
+
+The independent end-to-end harness additionally exercises the complete four-step Xeris round trip and a lost submission response through the actual client modules, preserving the original transaction ID across a simulated reload. This is offline application validation, not a funded browser/Web4 or Solana settlement run. Font license notices are included in `dist/assets/licenses/`.
