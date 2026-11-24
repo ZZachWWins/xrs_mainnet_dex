@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test test-model.mjs test-trade.mjs test-e2e.mjs test-markets.mjs test-feed.mjs test-currency.mjs",
+    "test": "node --test test-model.mjs test-trade.mjs test-e2e.mjs test-markets.mjs test-feed.mjs test-currency.mjs test-bridge.mjs",
     "build": "node build.mjs",
     "dev": "python3 -m http.server 8769 --bind 127.0.0.1 --directory dist"
   }

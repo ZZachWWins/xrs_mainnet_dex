@@ -25,7 +25,9 @@ The local preview is `http://127.0.0.1:8769`. `dist/` contains the maintained HT
 - One wallet-approved action at a time: xUSDC → wXRS, wXRS → xUSDC, wrap or unwrap.
 - Verification of the returned transaction message and Ed25519 signature before broadcast.
 - Public localStorage journal written before a single submission; Web Locks prevent concurrent submissions in this browser. Pending transactions are reconciled using their original signature, including after reload. Unknown results never trigger automatic resends.
-- Transaction activity and clear unavailable states for public USDC deposits/redemptions.
+- A dedicated Bridge purchase tab with separate Solana wallet selection, manual Xeris mainnet recipient entry and explicit optional Xeris-wallet autofill.
+- Source-network selection with official chain marks: Solana selected; Ethereum, Base, Arbitrum, Polygon and Avalanche shown as disabled “Coming later” options.
+- Transaction activity and clear unavailable states for public USDC purchases/redemptions.
 
 ## Mainnet contract
 
@@ -41,7 +43,7 @@ The local preview is `http://127.0.0.1:8769`. `dist/` contains the maintained HT
 | Checkpoint slot | 27201 |
 | Checkpoint hash | `0a401c139eef73f049010450d4aa13ef38636799784d01bbc0ecdb9c71facaf3` |
 
-The pool holds wXRS and xUSDC. A native-XRS buy is a swap followed by a 1:1 unwrap; selling reverses those actions. The interface requests separate approvals, with an explicit amount for conversion. A two-step route costs 0.002 native XRS in network fees. Ordinary Solana wallet providers are never used to sign Xeris transactions. The supported injected provider is `window.xeris` from the Xeris wallet browser (or a compatible extension), with `connect`, `getRpcUrl` and `signTransaction`.
+The pool holds wXRS and xUSDC. A native-XRS buy is a swap followed by a 1:1 unwrap; selling reverses those actions. The interface requests separate approvals, with an explicit amount for conversion. A two-step route costs 0.002 native XRS in network fees. Ordinary Solana wallet providers are never used to sign Xeris transactions. The shared injected provider is `window.xeris` for the Xeris iOS wallet, Android wallet and Chrome extension, with `connect`, `getRpcUrl` and `signTransaction`. Each wallet must implement the same mainnet-bound contract; connection guidance names all three products. This does not claim a funded compatibility run on every wallet build.
 
 The 30-second quote lifetime and 0.5% minimum output require fresh review if approval is slow. Browsers without Web Locks, persistent localStorage or Ed25519 WebCrypto fail closed. Clearing browser data removes its local transaction journal; this is not cross-device recovery. Receipt checks establish reported Xeris execution, not cross-chain finality.
 
@@ -49,13 +51,19 @@ The 30-second quote lifetime and 0.5% minimum output require fresh review if app
 
 The controlled operator test already completed Solana USDC → xUSDC → native XRS → xUSDC → Solana USDC. The new website has not yet completed a funded wallet-browser round trip.
 
+The Bridge purchase route is designed for **Solana USDC → native mainnet XRS**. xUSDC settlement and the pool’s wrapped XRS are internal steps. Source-wallet connection and address review are implemented; no purchase request, signing or deposit transfer is performed by these controls. Only the Buy XRS with USDC tab exposes manual recipient entry and the Solana connection. The Xeris wallet is optional for receiving; its connected public address is copied only on explicit request. Format validation cannot establish the network or ownership of a base58 address. Source-account changes invalidate address reviews.
+
+The Solana picker discovers compatible Wallet Standard registrations and provides direct Phantom, Solflare and Backpack adapters. The user explicitly chooses a provider; missing or removed wallets never fall back to another one. Account changes, adapter replacement and provider changes invalidate reviews. Standard accounts must advertise `solana:mainnet` and match their 32-byte public key. Ambiguous multi-account responses require a single account selection in the wallet. Browser discovery does not prove account ownership or network execution, and no transfer/signing method is invoked. Mobile users open the DEX in their wallet browser; cross-app deep-link pairing is not implemented.
+
+Solana is the first configured source network; its selectable tile is not a claim that purchases are enabled. Ethereum, Base, Arbitrum, Polygon and Avalanche are informational upcoming routes. Their disabled controls cannot select a payment network or create deposit instructions.
+
 Public automatic issuance/redemption is **disabled**. `operator-contract/` documents a separate offline request-intake foundation; it is not a deployed API. A verified request still needs chain evidence, global reserve/obligation accounting, scoped signing, payout reconciliation and recovery before funds can be accepted automatically. The website provides no deposit instruction or burn button while these components are unavailable. xUSDC is treasury-issued on Xeris, backed by an operator-controlled Solana USDC reserve; it is not Circle-issued native USDC or a trustless bridge.
 
 The interface does not claim that this new client/operator code was covered by the L1's CertiK audit. L1 consensus and running nodes are unchanged.
 
 ## Validation
 
-`npm test` runs 104 offline tests covering exact amounts, lossless JSON, pool identity, quote matching, wallet binding, transaction encoding, signature verification, balances/gas, storage failures, stale quotes, ambiguous submissions and receipt recovery. Codec bytes independently match all four action types from the public completed pilot artifacts. Tests use synthetic in-memory keys and mocked network writes. Browser checks use public mainnet reads; they do not spend funds.
+`npm test` runs 144 offline tests covering exact amounts, lossless JSON, pool identity, quote matching, wallet binding, transaction encoding, signature verification, balances/gas, storage failures, stale quotes, ambiguous submissions and receipt recovery. Codec bytes independently match all four action types from the public completed pilot artifacts. Bridge tests cover provider discovery, connection/account races, invalid addresses, immutable address reviews and provider replacement without invoking any signing or transaction API. Tests use synthetic in-memory keys and mocked network writes. Browser checks use public mainnet reads; they do not spend funds.
 
 Image and font origins are recorded in `asset-manifest.json`. Live chart points are observations from the current browser session, not fabricated historic candles. LP fees remain in pool reserves for LP shareholders; there is no separate 0.777% company cut in this pool.
 

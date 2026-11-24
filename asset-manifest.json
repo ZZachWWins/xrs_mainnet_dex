@@ -34,5 +34,62 @@
     "source_url": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
     "sha256": "6d14601d0b1109046e366592b8c0f256ffb075f69180b65dddd97ae665d49f9e",
     "bytes": 9276
+  },
+  {
+    "path": "dist/assets/solana.svg",
+    "source_url": "https://raw.githubusercontent.com/solana-foundation/solana-com/main/apps/web/public/src/img/branding/solanaLogoMark.svg",
+    "source_page": "https://solana.com/branding",
+    "sha256": "3d3401109aa061dec40a8659f1847817a8e647f98de1e65e76e86a95bbe1f08a",
+    "bytes": 2519,
+    "modified": false,
+    "usage": "Network identification; trademark belongs to its respective owner.",
+    "note": "Official Solana Foundation website source; gradient logomark."
+  },
+  {
+    "path": "dist/assets/arbitrum.svg",
+    "source_url": "https://raw.githubusercontent.com/OffchainLabs/arbitrum-tutorials/master/assets/logo.svg",
+    "source_page": "https://github.com/OffchainLabs/arbitrum-tutorials/blob/master/assets/logo.svg",
+    "sha256": "40e2738d9f8e7bbe639831d601640d6a9b4435ec85350b100c1e3a3e03f2f9ca",
+    "bytes": 2052,
+    "modified": false,
+    "usage": "Network identification; trademark belongs to its respective owner.",
+    "note": "Official Offchain Labs developer repository; full-color hexagon logomark."
+  },
+  {
+    "path": "dist/assets/polygon.svg",
+    "source_url": "https://polygon.technology/favicon.svg",
+    "source_page": "https://polygon.technology/brand-guidelines",
+    "sha256": "7eda178dc46658f07c55fa47d0d4d51840547f1ff73eab4da28a22923f9baf5b",
+    "bytes": 515,
+    "modified": false,
+    "usage": "Network identification; trademark belongs to its respective owner.",
+    "note": "Official Polygon website icon; original white mark on purple rounded square."
+  },
+  {
+    "path": "dist/assets/base.svg",
+    "source_url": "https://api.github.com/repos/base/brand-kit/contents/logo/TheSquare/Digital/Base_square_blue.svg",
+    "source_page": "https://github.com/base/brand-kit",
+    "sha256": "305d3b4e5e25e03c832337f5d7f8d5d1a05f7ede26e7004abf33bf452b90a30c",
+    "bytes": 673,
+    "modified": false,
+    "usage": "Network identification; trademark belongs to its respective owner."
+  },
+  {
+    "path": "dist/assets/ethereum.png",
+    "source_url": "https://raw.githubusercontent.com/ethereum/ethereum-org-website/dev/public/images/eth-logo.png",
+    "source_page": "https://ethereum.org/assets/",
+    "sha256": "6f0c4feb21b0c1cd7b221bc19006ed1251d694dfb3b0c91c16117d666305d1b4",
+    "bytes": 270806,
+    "modified": false,
+    "usage": "Network identification; trademark belongs to its respective owner."
+  },
+  {
+    "path": "dist/assets/avalanche.svg",
+    "source_url": "https://www.avalanche.com/favicon-light.svg",
+    "source_page": "https://www.avalanche.com/about/press",
+    "sha256": "8843998a7b91875f3dc6027bd1383ccf97c3d1534d2f3e56d363706039146882",
+    "bytes": 1016,
+    "modified": false,
+    "usage": "Network identification; trademark belongs to its respective owner."
   }
 ]

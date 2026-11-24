@@ -66,3 +66,53 @@ header{position:relative;top:auto;z-index:auto;background:transparent;backdrop-f
 @media(max-width:1290px){.fx-attribution{margin-left:24px;margin-right:24px}}
 @media(max-width:800px){.currency-control{flex-basis:64px}.currency-control select{font-size:.72rem;padding-left:4px;padding-right:18px}.currency-control svg{right:4px}.ticker-inner{gap:12px}.market-ticker{padding-left:13px;padding-right:13px}.network-state{font-size:.78rem}.hero-label{font-size:.62rem;letter-spacing:.13em}.fx-attribution{flex-direction:column;gap:5px;padding:18px 0}.tag{font-size:.72rem}}
 @media(max-width:420px){.ticker-inner{gap:10px}.currency-control{flex-basis:60px}.currency-control select{font-size:.7rem;padding-left:2px}.market-ticker{gap:6px;padding-left:12px;padding-right:12px}.market-ticker small{font-size:.64rem}.market-ticker strong{font-size:.76rem}.ticker-unit{font-size:.65rem}.ticker .mainnet-label{font-size:.62rem!important;letter-spacing:.06em!important}.fx-attribution{margin-left:16px;margin-right:16px}.network-metrics [data-feed="market-cap"]{font-size:1.5rem}.fiat-estimate{font-size:.74rem}.hero-label{font-size:.6rem}}
+
+/* Settlement keeps funding and receiving accounts within the deposit tab. */
+.bridge-tabs{display:flex;gap:30px;margin:30px 0 28px;border-bottom:1px solid var(--border)}
+.bridge-tabs button{padding:14px 0;background:none;border:0;border-bottom:2px solid transparent;color:#8f9fba;font-size:.9rem;font-weight:500;min-height:48px}
+.bridge-tabs button[aria-selected="true"]{color:#e9eef8;border-bottom-color:#9caeec}
+.bridge-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:28px;align-items:start}
+.deposit-panel{padding:30px}.deposit-panel .card-title{margin-bottom:0}.plain-meta{font-size:.75rem;color:#8c9db8;white-space:nowrap}
+.deposit-source{padding:26px 0;border-bottom:1px solid var(--border)}.deposit-source p,.deposit-destination p{font-size:.83rem;line-height:1.7;margin:10px 0;color:#93a1b8}
+.field-label{display:block;color:#dce4f4;font-size:.85rem;font-weight:500}.wallet-actions{display:flex;gap:18px;align-items:center;margin-top:18px}
+.wallet-actions .button{min-height:46px;font-size:.85rem}.wallet-state{min-height:1.6em}.wallet-public-address{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem!important;overflow-wrap:anywhere;user-select:all;color:#b6c4df!important}
+.deposit-destination{padding:26px 0 18px}.recipient-input{display:block;min-width:0;width:100%;border:1px solid #7488b838;border-radius:2px;background:#050e1e;color:#e7edf8;padding:15px 14px;font-size:.84rem;line-height:1.6;margin-top:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.recipient-input::placeholder{color:#6e809d;font-family:Inter,sans-serif}.recipient-input:focus-visible{outline:1px solid #9aaedd;outline-offset:2px}.recipient-input[aria-invalid="true"]{border-color:#a9757a}
+.recipient-actions{display:flex;align-items:center;gap:20px;flex-wrap:wrap}.recipient-actions button{font-size:.78rem;min-height:44px;text-align:left}.recipient-status{min-height:2.8em}.recipient-status.error{color:#e2a2a7}.deposit-availability{font-size:.82rem;color:#a0adc2;line-height:1.6;margin:22px 0 12px}.deposit-panel #review-deposit-addresses{font-size:.85rem;min-height:46px}
+.deposit-context{display:grid;gap:24px}.deposit-context .panel{padding:28px}.deposit-context .eyebrow{font-size:.68rem;margin-bottom:15px}.deposit-context h2{font-size:1.2rem}.deposit-context p{font-size:.88rem;line-height:1.8}.connection-roles{margin:0 0 20px}.connection-roles div{padding:15px 0;border-bottom:1px solid var(--border)}.connection-roles dt{font-size:.85rem;color:#dce4f4}.connection-roles dd{margin:5px 0 0;font-size:.82rem;color:#93a1b8}.deposit-context .footnote{font-size:.76rem}.redemption-panel{max-width:760px;padding:32px}.deposit-review{margin:20px 0}.deposit-review dt{font-size:.77rem;color:#8f9fba;margin-top:22px}.deposit-review dd{margin:8px 0 0;overflow-wrap:anywhere;font-size:.85rem;color:#e0e7f5;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+@media(max-width:900px){.bridge-layout{grid-template-columns:minmax(0,1fr);gap:22px}.deposit-context{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}}
+@media(max-width:600px){.deposit-panel{padding:22px 20px}.deposit-context{grid-template-columns:minmax(0,1fr)}.deposit-context .panel{padding:24px 20px}.bridge-tabs{margin:20px 0 22px;gap:28px}.bridge-tabs button{font-size:.85rem}.plain-meta{font-size:.68rem}.deposit-panel .card-title h2{font-size:1.12rem}.recipient-input{font-size:16px;padding:13px 10px}.recipient-actions{gap:4px 16px}.recipient-actions button{font-size:.76rem}.redemption-panel{padding:24px 20px}.wallet-actions{gap:14px}.wallet-actions .button{padding:11px 13px}.wallet-state{font-size:.76rem!important}}
+
+/* Source networks stay visible; unreleased routes cannot be selected. */
+.wallet-actions button{min-height:44px}
+.deposit-network{padding:24px 0 0;margin:0;border:0;min-width:0}
+.deposit-network legend{padding:0;float:left;width:100%;margin:0 0 14px}
+.network-options{clear:both;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.network-option{position:relative;min-width:0}
+.network-option input{position:absolute;width:1px;height:1px;margin:0;opacity:0}
+.network-choice{display:flex;align-items:center;gap:10px;min-height:78px;padding:14px 12px;border:1px solid #7488b82b;background:#050d1c;color:#c4ccdd;border-radius:3px}
+.network-choice>img{flex-shrink:0;width:28px;height:28px;object-fit:contain}
+.network-choice>span:not(.network-check){min-width:0}
+.network-choice strong{display:block;font-size:.78rem;font-weight:550;line-height:1.4;letter-spacing:0}
+.network-choice small{display:block;font-size:.66rem;line-height:1.5;color:#8e9bb2;margin-top:4px;white-space:nowrap}
+.network-option input:checked+.network-choice{border-color:#9bacd880;background:#13213a;color:#f1f4fb}
+.network-option input:checked+.network-choice small{color:#b3c0de}
+.network-option input:focus-visible+.network-choice{outline:2px solid var(--accent);outline-offset:3px}
+.network-option input:disabled+.network-choice{cursor:not-allowed}
+.network-check{margin-left:auto;color:#dce5ff;font-size:.85rem}
+.deposit-network p{color:#93a1b8;font-size:.8rem;line-height:1.7;margin:12px 0 0}
+@media(min-width:901px) and (max-width:1120px){.network-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.network-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.network-choice{min-height:76px;padding:12px 10px;gap:9px}.network-choice strong{font-size:.76rem}.network-choice small{font-size:.64rem}.network-choice>img{width:26px;height:26px}}
+
+/* Wallet discovery is explicit and separate from Xeris signing. */
+.solana-wallet-choices{display:grid;gap:0;margin:24px 0;border-top:1px solid var(--border)}
+.solana-wallet-choice{display:flex;align-items:center;gap:12px;min-width:0;border-bottom:1px solid var(--border)}
+.solana-wallet-pick{display:flex;align-items:center;justify-content:space-between;gap:16px;flex:1;min-width:0;min-height:68px;padding:16px 0;background:transparent;border:0;text-align:left}
+.solana-wallet-pick:disabled{opacity:1;cursor:default}
+.solana-wallet-pick:enabled:hover .solana-wallet-name{color:var(--accent)}
+.solana-wallet-name{font-size:.95rem;font-weight:550;overflow-wrap:anywhere}
+.solana-wallet-detail{font-size:.74rem;font-weight:400;color:#92a0b8;white-space:nowrap}
+.solana-wallet-link{display:flex;align-items:center;min-height:44px;font-size:.76rem;color:#b7c5f6;white-space:nowrap}
+.solana-wallet-link:hover{text-decoration:underline}
+@media(max-width:420px){.solana-wallet-choice{gap:10px}.solana-wallet-pick{gap:8px}.solana-wallet-name{font-size:.86rem}.solana-wallet-detail{font-size:.67rem}.solana-wallet-link{font-size:.69rem}}
+
+.solana-wallet-method{display:block;font-size:.69rem;font-weight:400;color:#92a0b8;margin-top:3px}

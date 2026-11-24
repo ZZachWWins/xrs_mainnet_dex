@@ -178,6 +178,8 @@ The new DEX's client policy is a **30-second quote age** and **0.5% slippage**. 
 
 For the requested browser-based DEX flow, the iOS app must inject a compatible **`window.xeris`** provider into its WKWebView. Opening the website in an ordinary browser without that provider does not create a Xeris wallet connection. The new DEX deliberately does not fall back to `window.solana` or an ordinary Solana wallet.
 
+The same DEX connection contract is used by the **Xeris iOS wallet, Xeris Android wallet and Xeris Chrome extension**. Product guidance names all three. Mainnet compatibility must be verified against each actual wallet build; changing the website wording does not prove that a wallet implements these methods.
+
 Required provider contract:
 
 ```javascript
@@ -252,6 +254,12 @@ Blocking a REST read route is different from disabling an on-chain instruction. 
 - No generic `/swap`, `/wrap`, `/unwrap`, `/add-liquidity` or `/remove-liquidity` HTTP mutation route exists for the public app; encode the signed instructions in section 5.
 
 ## 9. Solana USDC, xUSDC and settlement availability
+
+The new DEX Bridge screen now separates **Buy XRS with USDC** from **Redeem USDC**. The purchase tab is intended to deliver native mainnet XRS to a manually entered Xeris address; xUSDC and wrapped XRS are internal settlement assets. A Xeris connection is optional for receiving and only fills the address on explicit request. Solana wallet connection is separate and never signs Xeris instructions. The browser verifies address encoding only, not ownership or network.
+
+Solana connections use an explicit wallet selector: compatible Wallet Standard registrations, plus direct Phantom, Solflare and Backpack providers. This is separate from `window.xeris`; never forward Solana signing requests to the Xeris wallet bridge. Standard account validation requires `solana:mainnet` and matching 32-byte public key/address fields. Provider and account changes invalidate address reviews, and a selected wallet never silently falls back to another provider. The selector only establishes a public-account connection; it is not proof of ownership or a funded purchase. Cross-app wallet deep links are not implemented.
+
+The source-network selector shows Solana plus Ethereum, Base, Arbitrum, Polygon and Avalanche logos. Only Solana is selectable; other networks are disabled and labeled “Coming later.” Do not interpret selection as purchase availability. The controls currently support source connection and address review only, with no payment instruction or purchase submission. Solana provider events invalidate outdated reviews.
 
 There is currently **no deployed public automatic deposit, issuance, redemption, payout, claim-status or gas-onboarding API**. The operator request-intake code in the DEX repository is an offline foundation, not an accessible production service. Do not invent paths such as `/bridge/deposit` or `/redeem`, display a general-purpose deposit address, or burn users' xUSDC before a real redemption workflow is available.
 

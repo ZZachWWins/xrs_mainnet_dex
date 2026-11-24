@@ -2,6 +2,7 @@ import {CONFIG, getPool, getQuote, getBalances, checkChain, parseAmount, formatA
 import {execute, reconcile, getHistory, getPending} from './trade.mjs';
 import {getLaunchpadTokens, mergeLaunchpadMarkets} from './markets.mjs';
 import {createMarketFeed, formatQuantity} from './feed.mjs';
+import {validateRecipient, createSolanaConnection} from './bridge.mjs';
 import {CURRENCIES, FX_SOURCE_URL, createCurrencyController, formatQuoteAmount, formatQuoteRatio} from './currency.mjs';
 const $ = id => document.getElementById(id);
 let provider = null, address = null, balances = null, buying = true, quote = null;
@@ -11,6 +12,7 @@ const balanceReads = new Map();
 const listeningProviders = new WeakSet();
 let observations = [], currentPool = null, lastObserved = 0;
 let currencySnapshot = null;
+let solanaState = {status:'disconnected',address:null}, depositRecipientSource = 'manual', depositReview = null;
 const selectedCurrency = () => currencySnapshot?.currency || 'USD';
 const money = (raw, options = {}) => currencySnapshot ? formatQuoteAmount(raw,currencySnapshot,options) : null;
 const ratioMoney = (numerator,denominator,options = {}) => currencySnapshot ? formatQuoteRatio(numerator,denominator,currencySnapshot,options) : null;
@@ -55,8 +57,8 @@ function renderValuations() {
 }
 const say = message => { $('toast').textContent = message; $('toast').classList.remove('hidden'); clearTimeout(say.timer); say.timer = setTimeout(() => $('toast').classList.add('hidden'), 9000); };
 const message = (text, error = false) => { $('trade-message').textContent = text; $('trade-message').classList.toggle('error', error); };
-function modal(title, html) { $('dialog-title').textContent = title; $('dialog-body').innerHTML = html; if (!$('info-dialog').open) $('info-dialog').showModal(); }
-function closeModal() { $('info-dialog').close(); }
+function modal(title, html) { delete $('info-dialog').dataset.solanaPicker; delete $('info-dialog').dataset.depositReview; $('dialog-title').textContent = title; $('dialog-body').innerHTML = html; if (!$('info-dialog').open) $('info-dialog').showModal(); }
+function closeModal() { delete $('info-dialog').dataset.solanaPicker; delete $('info-dialog').dataset.depositReview; $('info-dialog').close(); }
 $('close-dialog').onclick = closeModal;
 $('info-dialog').addEventListener('click', e => { if (e.target === $('info-dialog')) closeModal(); });
 function route() {
@@ -217,6 +219,7 @@ window.addEventListener('pagehide', () => { marketFeed.stop(); currencyControlle
 window.addEventListener('pageshow', () => { if (!document.hidden) { marketFeed.start(); currencyController.start(); } });
 
 function renderBalances() {
+  renderDepositState();
   $('wallet-address').textContent = address || 'Connect your Xeris wallet to view balances.';
   $('native-balance').textContent = balances ? formatAmount(balances.nativeRaw,9) : '—';
   $('wrapped-balance').textContent = balances ? formatAmount(balances.wrappedRaw,9) : '—';
@@ -241,8 +244,9 @@ function pending() {
   catch(error) { historyError = true; message(error.message,true); return {status:'pending'}; }
 }
 function updateAction() {
+  renderDepositState();
   const outstanding = pending();
-  $('trade-button').textContent = connecting ? 'Connecting wallet…' : busy ? 'Waiting for wallet / transaction…' : outstanding ? 'Check pending transaction' : address ? 'Review swap' : 'Connect Wallet';
+  $('trade-button').textContent = connecting ? 'Connecting wallet…' : busy ? 'Waiting for wallet / transaction…' : outstanding ? 'Check pending transaction' : address ? 'Review swap' : 'Connect Xeris wallet';
   $('trade-button').disabled = busy || connecting || historyError || (!!address && !outstanding && !quote);
   ['pay-amount','buy-tab','sell-tab','reverse'].forEach(id => $(id).disabled = busy);
 }
@@ -255,8 +259,8 @@ async function connect() {
     return;
   }
   const candidate = window.xeris;
-  if (!candidate || !(candidate.isXerisWallet || candidate.isXeris) || typeof candidate.signTransaction !== 'function') {
-    modal('Connect your Xeris wallet', '<p>Open this site inside the Xeris Android wallet’s browser, or use a compatible Xeris wallet extension.</p><p>Choose the mainnet network in your wallet, then connect here.</p><p class="footnote">No seed phrase or private key is needed on this website. Solana wallets are used for the future USDC deposit step, not for signing Xeris trades.</p>'); return;
+  if (!candidate || !(candidate.isXerisWallet || candidate.isXeris) || !['connect','getRpcUrl','signTransaction'].every(method => typeof candidate[method] === 'function')) {
+    modal('Connect your Xeris wallet', '<p>Use your Xeris wallet to connect to mainnet.</p><dl class="connection-roles"><div><dt>Xeris iOS wallet</dt><dd>Open this DEX in the wallet’s Web4 browser.</dd></div><div><dt>Xeris Android wallet</dt><dd>Open this DEX in the wallet’s Web4 browser.</dd></div><div><dt>Xeris Chrome extension</dt><dd>Enable the Xeris extension for this site, then connect.</dd></div></dl><p>Select mainnet in your wallet before connecting.</p><p class="footnote">Solana wallets connect separately to fund USDC purchases. This website never asks for your seed phrase or private key.</p>'); return;
   }
   connecting = true; connectingProvider = candidate; const generation = ++connectionGeneration;
   if (!listeningProviders.has(candidate)) {
@@ -267,7 +271,7 @@ async function connect() {
   try {
     const result = await candidate.connect(); const owner = String(result.publicKey ?? result);
     if (generation !== connectionGeneration) return;
-    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(owner)) throw new Error('The wallet did not return a valid public address.');
+    validateRecipient(owner);
     if (String(await candidate.getRpcUrl()).replace(/\/$/,'') !== CONFIG.rpc) throw new Error('Select Xeris mainnet in your wallet first.');
     await checkChain(); if (generation !== connectionGeneration) return;
     provider = candidate; connectingProvider = null; address = owner; balances = null; renderBalances();
@@ -278,7 +282,7 @@ async function connect() {
   } catch(error) { if (generation === connectionGeneration) { clearConnection(); say(error.message); } }
   finally { if (generation === connectionGeneration) { connecting = false; connectingProvider = null; $('connect-button').disabled = false; updateAction(); } }
 }
-function clearConnection() { connectionGeneration++; connecting = false; connectingProvider = null; $('connect-button').disabled = false; provider = null; address = null; balances = null; $('connect-button').textContent = 'Connect Wallet'; renderBalances(); renderHistory(); updateAction(); }
+function clearConnection() { connectionGeneration++; connecting = false; connectingProvider = null; $('connect-button').disabled = false; provider = null; address = null; balances = null; $('connect-button').textContent = 'Connect Xeris'; renderBalances(); renderHistory(); updateAction(); }
 $('connect-button').onclick = connect;
 function setDirection(value) {
   if (busy) return;
@@ -377,6 +381,132 @@ async function reconcilePending() {
   finally { reconcileBusy=false; $('reconcile-button').disabled=false; }
 }
 $('reconcile-button').onclick=reconcilePending;
+
+function clearDepositReview(reason) {
+  if (!depositReview) return;
+  depositReview = null;
+  if ($('info-dialog').open && $('info-dialog').dataset.depositReview === 'true') {
+    closeModal(); if (reason) say(reason);
+  }
+}
+function depositRecipient() {
+  try { return validateRecipient($('deposit-recipient').value); } catch { return null; }
+}
+function renderDepositState() {
+  const input = $('deposit-recipient'), recipient = depositRecipient();
+  $('usdc-network').checked = true;
+  if (depositRecipientSource === 'connected_xeris' && address !== recipient) {
+    depositRecipientSource = 'manual';
+    clearDepositReview('The Xeris connection changed. Review the receiving address again.');
+  }
+  const invalid = input.value.trim().length > 0 && !recipient;
+  input.setAttribute('aria-invalid',String(invalid));
+  const hint = $('deposit-recipient-status'); hint.classList.toggle('error',invalid);
+  hint.textContent = invalid ? 'Enter a valid Xeris wallet address.' : recipient ? 'Address format checked. Confirm the full address in your Xeris mainnet wallet.' : 'Enter an address or choose your connected Xeris wallet.';
+  $('use-xeris-recipient').disabled = !address || connecting || busy;
+  $('bridge-xeris-connect').disabled = connecting || busy;
+  $('bridge-xeris-connect').textContent = address ? 'Manage Xeris connection' : connecting ? 'Connecting Xeris…' : 'Connect Xeris wallet';
+  const working = ['connecting','disconnecting'].includes(solanaState.status);
+  $('solana-connect').disabled = working;
+  $('solana-connect').classList.remove('hidden');
+  $('solana-connect').textContent = solanaState.status === 'disconnecting' ? 'Disconnecting Solana…' : working ? 'Connecting Solana…' : solanaState.status === 'connected' ? 'Change Solana wallet' : 'Connect Solana wallet';
+  $('solana-disconnect').classList.toggle('hidden',solanaState.status !== 'connected');
+  $('solana-disconnect').disabled = working;
+  $('solana-wallet-address').textContent = solanaState.address || '';
+  $('solana-wallet-address').classList.toggle('hidden',!solanaState.address);
+  const walletName = solanaState.provider || 'your Solana wallet';
+  $('solana-wallet-state').textContent = solanaState.status === 'connected' ? `${walletName} connected · Solana funding account` : solanaState.status === 'connecting' ? `Approve the connection in ${walletName}.` : solanaState.status === 'disconnecting' ? `Disconnecting ${walletName}…` : solanaState.error || 'Phantom, Solflare, Backpack and compatible Solana wallets.';
+  $('review-deposit-addresses').disabled = solanaState.status !== 'connected' || !recipient;
+}
+function showBridgeTab(kind, focus = false) {
+  for (const name of ['deposit','redeem']) {
+    const selected = name === kind, tab = $(`bridge-${name}-tab`);
+    tab.setAttribute('aria-selected',String(selected)); tab.tabIndex = selected ? 0 : -1;
+    $(`bridge-${name}-panel`).classList.toggle('hidden',!selected);
+    if (selected && focus) tab.focus();
+  }
+}
+for (const name of ['deposit','redeem']) {
+  const tab = $(`bridge-${name}-tab`);
+  tab.onclick = () => showBridgeTab(name);
+  tab.onkeydown = event => {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault(); showBridgeTab(event.key === 'Home' ? 'deposit' : event.key === 'End' ? 'redeem' : name === 'deposit' ? 'redeem' : 'deposit',true);
+  };
+}
+const solanaConnection = createSolanaConnection({environment:window,onWalletsChange:() => {
+  if ($('info-dialog').open && $('info-dialog').dataset.solanaPicker === 'true') renderSolanaWalletChoices();
+},onChange:state => {
+  solanaState = state;
+  if (depositReview && !solanaConnection.isReviewCurrent(depositReview,{recipient:$('deposit-recipient').value,recipientSource:depositRecipientSource})) clearDepositReview('The Solana account changed. Review both addresses again.');
+  renderDepositState();
+}});
+solanaState = solanaConnection.getState();
+$('usdc-network').onchange = () => { clearDepositReview(); renderDepositState(); };
+$('deposit-recipient').oninput = () => { depositRecipientSource = 'manual'; clearDepositReview('The receiving address changed. Review it again.'); renderDepositState(); };
+$('use-xeris-recipient').onclick = () => {
+  if (!address || connecting || busy) return;
+  clearDepositReview(); $('deposit-recipient').value = address; depositRecipientSource = 'connected_xeris'; renderDepositState();
+};
+$('bridge-xeris-connect').onclick = connect;
+const SOLANA_WALLET_SITES = Object.freeze({
+  'legacy:phantom':'https://phantom.com/',
+  'legacy:solflare':'https://solflare.com/',
+  'legacy:backpack':'https://backpack.app/',
+});
+function renderSolanaWalletChoices() {
+  const list = $('solana-wallet-choices');
+  if (!list) return;
+  list.replaceChildren();
+  if (typeof solanaConnection.getWallets !== 'function') {
+    const unavailable = document.createElement('p'); unavailable.textContent = 'Wallet discovery is unavailable. Reload to continue.'; list.append(unavailable); return;
+  }
+  const wallets = solanaConnection.getWallets();
+  // Provider names are display labels, never identity or deduplication keys.
+  for (const wallet of wallets) {
+    const row = document.createElement('div'); row.className = 'solana-wallet-choice';
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'solana-wallet-pick';
+    button.disabled = !wallet.available;
+    const name = document.createElement('span'); name.className = 'solana-wallet-name'; name.textContent = wallet.name;
+    if (wallets.some(other => other.id !== wallet.id && other.name.toLowerCase() === wallet.name.toLowerCase())) {
+      const method = document.createElement('small'); method.className = 'solana-wallet-method';
+      method.textContent = wallet.kind === 'wallet-standard' ? 'Wallet Standard' : 'Browser extension'; name.append(method);
+    }
+    const detail = document.createElement('span'); detail.className = 'solana-wallet-detail';
+    detail.textContent = wallet.available ? solanaState.status === 'connected' && solanaState.providerId === wallet.id ? 'Connected' : 'Connect' : 'Not detected';
+    button.append(name,detail);
+    button.onclick = async () => {
+      if (!wallet.available) return;
+      clearDepositReview(); closeModal();
+      try { await solanaConnection.connect(wallet.id); } catch { say('The wallet could not connect. Please choose it again.'); }
+      renderDepositState();
+    };
+    row.append(button);
+    if (!wallet.available && SOLANA_WALLET_SITES[wallet.id]) {
+      const link = document.createElement('a'); link.className = 'solana-wallet-link'; link.href = SOLANA_WALLET_SITES[wallet.id];
+      link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'Get wallet'; link.setAttribute('aria-label',`Get ${wallet.name}`);
+      row.append(link);
+    }
+    list.append(row);
+  }
+}
+$('solana-connect').onclick = () => {
+  modal('Choose your Solana wallet','<p>Connect the wallet holding your Solana USDC.</p><div id="solana-wallet-choices" class="solana-wallet-choices"></div><p class="footnote">On mobile, open this DEX in your wallet’s browser. Compatible installed wallets appear automatically.</p><p class="footnote">Your Xeris receiving address is entered separately. Connecting a wallet does not transfer funds.</p>');
+  $('info-dialog').dataset.solanaPicker = 'true'; renderSolanaWalletChoices();
+};
+$('solana-disconnect').onclick = async () => { try { await solanaConnection.disconnect(); } catch(error) { say(error.message); } };
+$('review-deposit-addresses').onclick = () => {
+  try {
+    const review = solanaConnection.createReview({recipient:$('deposit-recipient').value,recipientSource:depositRecipientSource});
+    modal('Deposit addresses','<p>Check the source account and full receiving address.</p><dl class="deposit-review"><dt>From · Solana USDC</dt><dd id="review-solana-address"></dd><dt>To · Xeris mainnet</dt><dd id="review-xeris-address"></dd><dt>Receiving asset</dt><dd>Native XRS</dd></dl><p class="footnote">USDC purchases are unavailable. This address review does not submit a purchase request or transfer funds.</p><button class="button outline wide" id="close-address-review">Close</button>');
+    $('review-solana-address').textContent = review.sourceSolanaAddress;
+    $('review-xeris-address').textContent = review.destinationXerisAddress;
+    depositReview = review; $('info-dialog').dataset.depositReview = 'true';
+    $('close-address-review').onclick = closeModal;
+  } catch(error) { say(error.message); renderDepositState(); }
+};
+renderDepositState();
+
 const CURRENCY_PREFERENCE_KEY = 'xeris-display-currency-v1';
 let savedCurrency = 'USD';
 try { const preference = localStorage.getItem(CURRENCY_PREFERENCE_KEY); if (CURRENCIES.some(item => item.code === preference)) savedCurrency = preference; } catch {}
