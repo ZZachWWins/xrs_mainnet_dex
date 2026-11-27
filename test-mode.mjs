@@ -82,6 +82,7 @@ test('HTML exposes only gated startup and keeps selector/CTA outside the disable
   const html=readFileSync(new URL('./dist/index.html',import.meta.url),'utf8');
   assert.deepEqual([...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(match=>match[1]),['/startup.mjs']);
   assert.ok(html.indexOf('class="dex-network-bar"')<html.indexOf('id="dex-shell"'));
+  assert.match(html,/SECURITY AUDITED/);assert.match(html,/Built on the CertiK-audited Xeris L1 core\./);
   assert.ok(html.indexOf('id="dex-mainnet-link"')<html.indexOf('id="dex-shell"'));
   const startup=readFileSync(new URL('./dist/startup.mjs',import.meta.url),'utf8');
   assert.match(startup,/location\.assign\(networkHref/);assert.doesNotMatch(startup,/history\.pushState/);
